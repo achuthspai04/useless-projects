@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Splash from "./splash";
 
@@ -13,6 +14,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const drowner = localFont({
+  src: "../fonts/Drowner.otf",
+  variable: "--font-drowner",
+});
+
+const jrk = localFont({
+  src: "../fonts/JRK.otf",
+  variable: "--font-jrk",
+});
+
 export const metadata: Metadata = {
   title: "useless-projects",
   description: "",
@@ -22,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Splash>{children}</Splash>
