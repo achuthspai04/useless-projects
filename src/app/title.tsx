@@ -24,7 +24,7 @@ export default function Title() {
         <span className="block">Projects</span>
       </h1>
       <Floating sensitivity={0.5} easingFactor={0.06} className="pointer-events-none">
-        <FloatingElement depth={1} style={{ top: "-168px", right: "-43px" }}>
+        <FloatingElement depth={1} style={{ top: "-178px", right: "-43px" }}>
           <ElephantBadge />
         </FloatingElement>
       </Floating>
