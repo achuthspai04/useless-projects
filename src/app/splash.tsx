@@ -3,17 +3,21 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 
-const IMAGES = ["/ele1.webp", "/ele2.webp", "/ele3.webp", "/ele4.webp", "/ele5.webp"];
-const INTERVAL_MS = 500;
-const DURATION_MS = 5000;
+const IMAGES = ["/ele1.webp", "/ele2.webp", "/ele3.webp", "/ele4.webp", "/ele5a.webp"];
+const INTERVAL_MS = 800;
 
 export default function Splash({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const id = setTimeout(() => setLoading(false), DURATION_MS);
-    return () => clearTimeout(id);
+    if (document.readyState === "complete") {
+      setLoading(false);
+      return;
+    }
+    const onLoad = () => setLoading(false);
+    window.addEventListener("load", onLoad);
+    return () => window.removeEventListener("load", onLoad);
   }, []);
 
   useEffect(() => {
