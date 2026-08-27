@@ -3,7 +3,14 @@ import ElephantBadge from "./elephant-badge";
 
 export default function Title() {
   return (
-    <div className="relative inline-block" style={{ transform: "translateY(-15%)" }}>
+    <div
+      className="absolute"
+      style={{
+        top: "332px",
+        left: "50%",
+        transform: "translateX(-50%)",
+      }}
+    >
       <h1
         className="font-drowner text-center text-black"
         style={{

@@ -24,6 +24,11 @@ const jrk = localFont({
   variable: "--font-jrk",
 });
 
+const nanumPen = localFont({
+  src: "../fonts/NanumPenScript-Regular.ttf",
+  variable: "--font-nanum-pen",
+});
+
 export const metadata: Metadata = {
   title: "useless-projects",
   description: "",
@@ -33,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} ${nanumPen.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Splash>{children}</Splash>
