@@ -1,6 +1,9 @@
-import Image from "next/image";
 import AnimatedElephant from "./animated-elephant";
 import Title from "./title";
+import TetrisSkyline from "./tetris-skyline";
+
+// ele4e.webp doesn't exist in public/ - the transition skips from d straight to f.
+const ELE4_FRAMES = ["/ele4a.webp", "/ele4b.webp", "/ele4c.webp", "/ele4d.webp", "/ele4f.webp"];
 
 const REF_WIDTH = 1920;
 const REF_HEIGHT = 1080;
@@ -19,15 +22,20 @@ export default function Home() {
           transformOrigin: "center center",
         }}
       >
-        <Image
-          src="/ele4.webp"
-          alt=""
-          width={90}
-          height={100}
-          className="absolute"
-          style={{ left: "192px", top: "280.8px", width: "90px", height: "100px" }}
+        {/* Center of the original 90px-wide static box (192px + 90/2 = 237px), shifted 8% of
+            REF_WIDTH left (237 - 153.6 = 83.4px) and 13% of REF_HEIGHT down total (280.8 + 54 +
+            86.4 = 421.2px, the initial 5% plus another 8%). AnimatedElephant's "center" anchor
+            takes `left` as that center point rather than a box edge. Near-continuous frame loop
+            (barely any idle pause between bursts) plus a slow autonomous up/down float (not
+            mouse-driven, unlike the "3.0" badge's parallax). */}
+        <AnimatedElephant
+          frames={ELE4_FRAMES}
+          frameIntervalMs={450}
+          minDelayMs={50}
+          maxDelayMs={150}
+          floatAnimation
+          style={{ left: "83.4px", top: "421.2px", height: "100px" }}
         />
-        <AnimatedElephant style={{ left: "1344px", top: "378px", width: "85px", height: "113px" }} />
         <p
           className="font-nanum-pen absolute text-right text-black"
           style={{ top: "118.8px", right: "40px", fontSize: "27px", lineHeight: 0.9 }}
@@ -36,16 +44,9 @@ export default function Home() {
           <br />
           campus community
         </p>
-        <Image
-          src="/ele3.webp"
-          alt=""
-          width={70}
-          height={100}
-          className="absolute"
-          style={{ left: "403.2px", top: "799.2px", width: "70px", height: "100px" }}
-        />
         <Title />
       </div>
+      <TetrisSkyline />
     </div>
   );
 }

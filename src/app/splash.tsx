@@ -5,19 +5,26 @@ import { useEffect, useState } from "react";
 
 const IMAGES = ["/ele1.webp", "/ele2.webp", "/ele3.webp", "/ele4.webp", "/ele5a.webp"];
 const INTERVAL_MS = 800;
+const MIN_DISPLAY_MS = 2000;
 
 export default function Splash({ children }: { children: React.ReactNode }) {
-  const [loading, setLoading] = useState(true);
+  const [pageLoaded, setPageLoaded] = useState(
+    () => typeof document !== "undefined" && document.readyState === "complete"
+  );
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [index, setIndex] = useState(0);
+  const loading = !pageLoaded || !minTimeElapsed;
 
   useEffect(() => {
-    if (document.readyState === "complete") {
-      setLoading(false);
-      return;
-    }
-    const onLoad = () => setLoading(false);
+    if (pageLoaded) return;
+    const onLoad = () => setPageLoaded(true);
     window.addEventListener("load", onLoad);
     return () => window.removeEventListener("load", onLoad);
+  }, [pageLoaded]);
+
+  useEffect(() => {
+    const id = setTimeout(() => setMinTimeElapsed(true), MIN_DISPLAY_MS);
+    return () => clearTimeout(id);
   }, []);
 
   useEffect(() => {
