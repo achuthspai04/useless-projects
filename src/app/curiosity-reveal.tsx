@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import TetrisField, { MAX_COLUMNS, MIN_COLUMNS } from "./tetris-field";
+import LegoBlock, { LEGO_COLOR_NAMES, type LegoColor } from "./lego-block";
 
 // Figma node 337:386 ("Frame 74") is the single date-card reference (Drowner "sep" + big date
-// number, a wavy-underlined "slot N" tag), built from a 2-wide x 3-tall block of lego cells - six
-// cells turned white - rather than one cell each. Repeated once per event day.
+// number, a wavy-underlined "slot N" tag), built from a 2-wide x 3-tall block of lego cells (six
+// cells turned white) rather than one cell each. Repeated once per event day.
 const SCHEDULE = [
   { day: "03", slot: 1 },
   { day: "04", slot: 1 },
@@ -18,15 +18,18 @@ const SCHEDULE = [
 
 const CARD_COLS = 2;
 const CARD_ROWS = 3;
+const MIN_COLUMNS = 8;
+const MAX_COLUMNS = 44;
+// Same flood-fill stagger the tetris field uses when it fills up (see FLOOD_ROW_STAGGER_MS in
+// tetris-field.tsx) - this is that same end-state, just built directly rather than played out.
+const ROW_STAGGER_MS = 55;
 // The "sep"/date-number tracking in the Figma card is 4% of its own font size (4px at 100px, 2px
 // at 50px - the same ratio), kept as one constant so both scale together.
 const LABEL_TRACKING_RATIO = 0.04;
 
-/** Same column/cell math TetrisField itself uses, reproduced here so the card overlay lands
- *  exactly on its grid rather than an independently-computed one that could drift a pixel off. */
-function gridFor(width: number, targetCell: number) {
-  const columns = Math.min(MAX_COLUMNS, Math.max(MIN_COLUMNS, Math.round(width / targetCell)));
-  return { columns, cell: width / columns };
+/** Deterministic per-cell colour so the wall doesn't reshuffle on every re-render. */
+function colorFor(col: number, row: number): LegoColor {
+  return LEGO_COLOR_NAMES[(col * 7 + row * 13) % LEGO_COLOR_NAMES.length];
 }
 
 export default function CuriosityReveal({
@@ -39,11 +42,11 @@ export default function CuriosityReveal({
   buttonFontSize,
 }: {
   /** Reference canvas size this section renders at (matches the caller's own REF_WIDTH/HEIGHT or
-   *  MOBILE_WIDTH/HEIGHT) - the card overlay is built directly from these rather than measuring
-   *  itself, since the caller's own CSS `scale()` transform doesn't change this layout box. */
+   *  MOBILE_WIDTH/HEIGHT) - the wall is built directly from these rather than measuring itself,
+   *  since the caller's own CSS `scale()` transform doesn't change this layout box. */
   width: number;
   height: number;
-  /** Passed straight through to TetrisField, and reused here to line the cards up with its grid. */
+  /** Preferred cell size in px, same idea as TetrisField's own targetCell. */
   targetCell: number;
   buttonTop: number;
   buttonWidth: number;
@@ -52,8 +55,9 @@ export default function CuriosityReveal({
 }) {
   const [revealed, setRevealed] = useState(false);
 
-  const { columns, cell } = gridFor(width, targetCell);
-  const rows = Math.max(CARD_ROWS * 2, Math.floor(height / cell));
+  const columns = Math.min(MAX_COLUMNS, Math.max(MIN_COLUMNS, Math.round(width / targetCell)));
+  const cell = width / columns;
+  const rows = Math.max(CARD_ROWS * 2, Math.ceil(height / cell));
 
   // Slot 1's four cards form an 8-column-wide row; Slot 2's three sit directly below, centred
   // under that row. Both blocks together are vertically centred in the field.
@@ -61,15 +65,19 @@ export default function CuriosityReveal({
   const slot2Width = 3 * CARD_COLS;
   const startCol = Math.max(0, Math.floor((columns - slot1Width) / 2));
   const slot2StartCol = startCol + Math.floor((slot1Width - slot2Width) / 2);
-  const blockHeight = CARD_ROWS * 2;
-  const topRow = Math.max(0, Math.floor((rows - blockHeight) / 2));
+  const topRow = Math.max(0, Math.floor((rows - CARD_ROWS * 2) / 2));
 
   const cards = SCHEDULE.map((entry, i) => {
     const inSlot1 = i < 4;
-    const col = (inSlot1 ? startCol : slot2StartCol) + (inSlot1 ? i : i - 4) * CARD_COLS;
-    const row = topRow + (inSlot1 ? 0 : CARD_ROWS);
-    return { ...entry, col, row };
+    return {
+      ...entry,
+      col: (inSlot1 ? startCol : slot2StartCol) + (inSlot1 ? i : i - 4) * CARD_COLS,
+      row: topRow + (inSlot1 ? 0 : CARD_ROWS),
+    };
   });
+
+  const cardAt = (col: number, row: number) =>
+    cards.find((c) => col >= c.col && col < c.col + CARD_COLS && row >= c.row && row < c.row + CARD_ROWS);
 
   return (
     <>
@@ -85,10 +93,27 @@ export default function CuriosityReveal({
       </button>
 
       {revealed && (
-        <div className="absolute inset-0 z-10 overflow-hidden">
-          {/* The exact same falling/landing tetris field as the hero, just given this section's
-              own size - blocks drop and stack here precisely the way they do there. */}
-          <TetrisField targetCell={targetCell} prefill={0.85} />
+        <div className="absolute inset-0 z-10">
+          {Array.from({ length: rows }, (_, row) =>
+            Array.from({ length: columns }, (_, col) => {
+              if (cardAt(col, row)) return null;
+              return (
+                <LegoBlock
+                  key={`${col}-${row}`}
+                  shape="stud"
+                  color={colorFor(col, row)}
+                  className="animate-lego-pop absolute"
+                  style={{
+                    left: col * cell,
+                    top: row * cell,
+                    width: cell - 1,
+                    height: cell - 1,
+                    animationDelay: `${row * ROW_STAGGER_MS}ms`,
+                  }}
+                />
+              );
+            })
+          )}
 
           {cards.map((card) => (
             <div
@@ -99,6 +124,7 @@ export default function CuriosityReveal({
                 top: card.row * cell,
                 width: CARD_COLS * cell - 1,
                 height: CARD_ROWS * cell - 1,
+                animationDelay: `${card.row * ROW_STAGGER_MS}ms`,
               }}
             >
               <p
