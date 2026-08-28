@@ -26,7 +26,7 @@ export default function HeroTagline({
         lineHeight: `${lineHeight}px`,
       }}
     >
-      exclusive to Tinkerhub campus community
+      exclusive to Tinkerhub campus community &lt;3
     </p>
   );
 }
