@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
 
+const SEE_ALL_URL = "https://airtable.com/appxzLxyo4vKPYH6w/shrRl7a8SMrf10Qhp";
+
 const BUTTON_WIDTH = 837;
 const BUTTON_HEIGHT = 364;
 
@@ -53,6 +55,7 @@ export default function SeeAllSection() {
     if (phase !== "ready") return;
     setPhase("popped");
     popTimer.current = setTimeout(() => setPhase("idle"), POP_DURATION_S * 1000);
+    window.open(SEE_ALL_URL, "_blank", "noopener,noreferrer");
   }, [phase]);
 
   // Idle → full size. Shrinking → animates to MIN_SCALE via CSS transition.
@@ -168,7 +171,7 @@ export default function SeeAllSection() {
               lineHeight: 1.4,
             }}
           >
-            (1200)
+            (2390)
           </span>
         </div>
 
@@ -182,8 +185,8 @@ export default function SeeAllSection() {
           onClick={handleClick}
           aria-label={
             phase === "ready"
-              ? "See all 1200 projects. Click to open."
-              : "See all 1200 projects. Hover and hold until it stops shrinking, then click."
+              ? "See all 2390 projects. Click to open the project list."
+              : "See all 2390 projects. Hover and hold until it stops shrinking, then click."
           }
           style={{
             position: "absolute",
