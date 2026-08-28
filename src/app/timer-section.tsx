@@ -37,11 +37,30 @@ function remainingUntilEvent() {
 const DESKTOP_TARGET_CELL = 68;
 const MOBILE_TARGET_CELL = 22;
 
+// The reveal runs itself: the board fills, the dates land on it once those blocks have settled
+// (animate-lego-pop is 200ms), they hold for a beat, and then the section comes back.
+const CARDS_IN_MS = 320;
+const CARDS_HOLD_MS = 1000;
+
 export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
   // a server-computed countdown against a client one computed moments later.
   const [remaining, setRemaining] = useState<{ hours: number; minutes: number } | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [showCards, setShowCards] = useState(false);
+
+  useEffect(() => {
+    if (!revealed) return;
+    const toCards = setTimeout(() => setShowCards(true), CARDS_IN_MS);
+    const toClose = setTimeout(() => {
+      setRevealed(false);
+      setShowCards(false);
+    }, CARDS_IN_MS + CARDS_HOLD_MS);
+    return () => {
+      clearTimeout(toCards);
+      clearTimeout(toClose);
+    };
+  }, [revealed]);
 
   // The button sits inside each breakpoint's scaled canvas so it tracks the design, while the
   // reveal itself covers the whole section - hence one shared flag rather than local state. `top`
@@ -167,15 +186,13 @@ export default function TimerSection() {
       {revealed && (
         <>
           {/* Mobile's cells are a third the size of desktop's, so its cards take a proportionally
-              bigger footprint (still 2:3) to come out physically similar, and wrap two per row to
-              stay inside the narrower board. */}
+              bigger footprint (still 2:3) to come out physically similar. */}
           <div className="absolute inset-0 z-10 lg:hidden">
             <CuriosityReveal
               targetCell={MOBILE_TARGET_CELL}
               cardCols={4}
               cardRows={6}
-              perRow={2}
-              onClose={() => setRevealed(false)}
+              showCards={showCards}
             />
           </div>
           <div className="absolute inset-0 z-10 hidden lg:block">
@@ -183,8 +200,7 @@ export default function TimerSection() {
               targetCell={DESKTOP_TARGET_CELL}
               cardCols={2}
               cardRows={3}
-              perRow={4}
-              onClose={() => setRevealed(false)}
+              showCards={showCards}
             />
           </div>
         </>
