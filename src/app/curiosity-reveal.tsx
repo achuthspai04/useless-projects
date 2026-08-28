@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import LegoBlock, { LEGO_COLOR_NAMES, type LegoColor } from "./lego-block";
+import TetrisField, { MAX_COLUMNS, MIN_COLUMNS } from "./tetris-field";
 
 // Figma node 337:386 ("Frame 74") is the single date-card reference (Drowner "sep" + big date
-// number, a wavy-underlined "slot N" tag) - this is that card repeated once per event day.
+// number, a wavy-underlined "slot N" tag), built from a 2-wide x 3-tall block of lego cells - six
+// cells turned white - rather than one cell each. Repeated once per event day.
 const SCHEDULE = [
   { day: "03", slot: 1 },
   { day: "04", slot: 1 },
@@ -15,14 +16,17 @@ const SCHEDULE = [
   { day: "13", slot: 2 },
 ] as const;
 
-const POP_ROW_STAGGER_MS = 40;
+const CARD_COLS = 2;
+const CARD_ROWS = 3;
 // The "sep"/date-number tracking in the Figma card is 4% of its own font size (4px at 100px, 2px
 // at 50px - the same ratio), kept as one constant so both scale together.
 const LABEL_TRACKING_RATIO = 0.04;
 
-/** Deterministic per-cell colour so the background tiling doesn't reshuffle on every re-render. */
-function colorFor(col: number, row: number): LegoColor {
-  return LEGO_COLOR_NAMES[(col * 7 + row * 13) % LEGO_COLOR_NAMES.length];
+/** Same column/cell math TetrisField itself uses, reproduced here so the card overlay lands
+ *  exactly on its grid rather than an independently-computed one that could drift a pixel off. */
+function gridFor(width: number, targetCell: number) {
+  const columns = Math.min(MAX_COLUMNS, Math.max(MIN_COLUMNS, Math.round(width / targetCell)));
+  return { columns, cell: width / columns };
 }
 
 export default function CuriosityReveal({
@@ -35,12 +39,11 @@ export default function CuriosityReveal({
   buttonFontSize,
 }: {
   /** Reference canvas size this section renders at (matches the caller's own REF_WIDTH/HEIGHT or
-   *  MOBILE_WIDTH/HEIGHT) - the lego grid is built directly from these rather than measuring
+   *  MOBILE_WIDTH/HEIGHT) - the card overlay is built directly from these rather than measuring
    *  itself, since the caller's own CSS `scale()` transform doesn't change this layout box. */
   width: number;
   height: number;
-  /** Preferred cell size in px - bigger than the background skyline's own 60px cells, so the date
-   *  text stays legible. Column count is derived from it, same idea as TetrisField's targetCell. */
+  /** Passed straight through to TetrisField, and reused here to line the cards up with its grid. */
   targetCell: number;
   buttonTop: number;
   buttonWidth: number;
@@ -49,22 +52,24 @@ export default function CuriosityReveal({
 }) {
   const [revealed, setRevealed] = useState(false);
 
-  const columns = Math.max(6, Math.round(width / targetCell));
-  const cell = width / columns;
-  const rows = Math.max(4, Math.ceil(height / cell));
+  const { columns, cell } = gridFor(width, targetCell);
+  const rows = Math.max(CARD_ROWS * 2, Math.floor(height / cell));
 
-  // The 7 date cards sit as a centred 4-wide block: Slot 1's four days on top, Slot 2's three
-  // days on the row directly below, left-aligned under the first three of those four columns.
-  const cardCols = 4;
-  const startCol = Math.floor((columns - cardCols) / 2);
-  const topRow = Math.max(0, Math.floor(rows / 2) - 1);
-  const bottomRow = topRow + 1;
+  // Slot 1's four cards form an 8-column-wide row; Slot 2's three sit directly below, centred
+  // under that row. Both blocks together are vertically centred in the field.
+  const slot1Width = 4 * CARD_COLS;
+  const slot2Width = 3 * CARD_COLS;
+  const startCol = Math.max(0, Math.floor((columns - slot1Width) / 2));
+  const slot2StartCol = startCol + Math.floor((slot1Width - slot2Width) / 2);
+  const blockHeight = CARD_ROWS * 2;
+  const topRow = Math.max(0, Math.floor((rows - blockHeight) / 2));
 
-  const cardAt = (col: number, row: number) => {
-    if (row === topRow && col >= startCol && col < startCol + 4) return SCHEDULE[col - startCol];
-    if (row === bottomRow && col >= startCol && col < startCol + 3) return SCHEDULE[4 + (col - startCol)];
-    return null;
-  };
+  const cards = SCHEDULE.map((entry, i) => {
+    const inSlot1 = i < 4;
+    const col = (inSlot1 ? startCol : slot2StartCol) + (inSlot1 ? i : i - 4) * CARD_COLS;
+    const row = topRow + (inSlot1 ? 0 : CARD_ROWS);
+    return { ...entry, col, row };
+  });
 
   return (
     <>
@@ -80,64 +85,48 @@ export default function CuriosityReveal({
       </button>
 
       {revealed && (
-        <div className="absolute inset-0 z-10">
-          {Array.from({ length: rows }, (_, row) =>
-            Array.from({ length: columns }, (_, col) => {
-              const card = cardAt(col, row);
-              const style = {
-                left: col * cell,
-                top: row * cell,
-                width: cell - 1,
-                height: cell - 1,
-                animationDelay: `${row * POP_ROW_STAGGER_MS}ms`,
-              };
+        <div className="absolute inset-0 z-10 overflow-hidden">
+          {/* The exact same falling/landing tetris field as the hero, just given this section's
+              own size - blocks drop and stack here precisely the way they do there. */}
+          <TetrisField targetCell={targetCell} prefill={0.85} />
 
-              if (!card) {
-                return (
-                  <LegoBlock
-                    key={`${col}-${row}`}
-                    shape="stud"
-                    color={colorFor(col, row)}
-                    className="animate-lego-pop absolute"
-                    style={style}
-                  />
-                );
-              }
-
-              return (
-                <div
-                  key={`${col}-${row}`}
-                  className="animate-lego-pop absolute flex flex-col items-center justify-center bg-white"
-                  style={style}
-                >
-                  <p
-                    className="font-helvetica lowercase text-[#242525]"
-                    style={{
-                      fontSize: cell * 0.15,
-                      transform: "rotate(-5.67deg)",
-                      textDecoration: "underline wavy",
-                      textDecorationSkipInk: "none",
-                      textUnderlinePosition: "from-font",
-                    }}
-                  >
-                    slot {card.slot}
-                  </p>
-                  <p
-                    className="font-drowner leading-none text-black"
-                    style={{ fontSize: cell * 0.22, letterSpacing: cell * 0.22 * LABEL_TRACKING_RATIO }}
-                  >
-                    sep
-                  </p>
-                  <p
-                    className="font-drowner leading-none text-black"
-                    style={{ fontSize: cell * 0.42, letterSpacing: cell * 0.42 * LABEL_TRACKING_RATIO }}
-                  >
-                    {card.day}
-                  </p>
-                </div>
-              );
-            })
-          )}
+          {cards.map((card) => (
+            <div
+              key={card.day}
+              className="animate-lego-pop absolute flex flex-col items-center justify-center bg-white"
+              style={{
+                left: card.col * cell,
+                top: card.row * cell,
+                width: CARD_COLS * cell - 1,
+                height: CARD_ROWS * cell - 1,
+              }}
+            >
+              <p
+                className="font-helvetica lowercase text-[#242525]"
+                style={{
+                  fontSize: cell * 0.32,
+                  transform: "rotate(-5.67deg)",
+                  textDecoration: "underline wavy",
+                  textDecorationSkipInk: "none",
+                  textUnderlinePosition: "from-font",
+                }}
+              >
+                slot {card.slot}
+              </p>
+              <p
+                className="font-drowner leading-none text-black"
+                style={{ fontSize: cell * 0.45, letterSpacing: cell * 0.45 * LABEL_TRACKING_RATIO }}
+              >
+                sep
+              </p>
+              <p
+                className="font-drowner leading-none text-black"
+                style={{ fontSize: cell * 0.85, letterSpacing: cell * 0.85 * LABEL_TRACKING_RATIO }}
+              >
+                {card.day}
+              </p>
+            </div>
+          ))}
 
           <button
             type="button"
