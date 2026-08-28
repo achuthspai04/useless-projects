@@ -25,8 +25,10 @@ const ELE5_SECONDARY_FRAMES = ["/ele5f.webp", "/ele5g.webp", "/ele5h.webp", "/el
 // this is a phone or a wide desktop - only the column count changes. The standing skyline fills
 // the bottom SKYLINE_ROWS of it and blocks drop onto that.
 const SKYLINE_ROWS = 4;
-const MIN_COLUMNS = 8;
-const MAX_COLUMNS = 44;
+// Exported so anything overlaying fixed content on top of this field (e.g. CuriosityReveal's
+// date cards) can reproduce the exact same column/cell math and land on the real grid pitch.
+export const MIN_COLUMNS = 8;
+export const MAX_COLUMNS = 44;
 
 const FALL_ROWS_PER_MS = 0.0065;
 const LAND_PAUSE_MS = 110;
