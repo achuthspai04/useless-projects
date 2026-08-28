@@ -33,6 +33,10 @@ const LAND_PAUSE_MS = 110;
 const FLOOD_ROW_STAGGER_MS = 55;
 const FLOOD_HOLD_MS = 1100;
 const RESET_PAUSE_MS = 500;
+// How long a perched creature stays gone after getting bonked before it pops back up somewhere
+// else - long enough for the fade-out transition (see CREATURE_TRANSITION_MS) to finish first.
+const CREATURE_RESPAWN_MS = 700;
+const CREATURE_TRANSITION_MS = 300;
 
 interface Placed {
   col: number;
@@ -48,6 +52,12 @@ interface FloodCell {
   col: number;
   row: number;
   color: LegoColor;
+}
+interface CreatureState {
+  col: number;
+  /** Row units, matching `surface` - the block-height the creature is currently perched at. */
+  row: number;
+  alive: boolean;
 }
 
 // Per-shape geometry in whole rows/columns, worked out once rather than on every spawn.
@@ -242,6 +252,13 @@ export default function TetrisField({
   const lastColorRef = useRef<LegoColor | null>(null);
   const idRef = useRef(0);
 
+  // The two perched creatures. Mirrored into refs (like landedRef above) so the drop loop can
+  // read/kill/respawn them without the whole effect needing to restart whenever they move.
+  const [ele3, setEle3] = useState<CreatureState | null>(null);
+  const [ele5, setEle5] = useState<CreatureState | null>(null);
+  const ele3Ref = useRef<CreatureState | null>(null);
+  const ele5Ref = useRef<CreatureState | null>(null);
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -295,12 +312,63 @@ export default function TetrisField({
       );
     };
 
+    // Both creatures perch on top of whatever the skyline turned out to be under them, same as
+    // their initial placement did before this became stateful.
+    const placeCreature = (fraction: number): CreatureState => {
+      const col = Math.min(columns - 2, Math.max(0, Math.round(columns * fraction)));
+      return { col, row: surfaceRef.current[col] ?? 0, alive: true };
+    };
+
+    const resetCreatures = () => {
+      const c3 = placeCreature(0.18);
+      const c5 = placeCreature(0.8);
+      ele3Ref.current = c3;
+      ele5Ref.current = c5;
+      setEle3(c3);
+      setEle5(c5);
+    };
+    resetCreatures();
+
+    // A block landing in a creature's column always lands right at the creature's feet (the
+    // creature isn't part of the landing grid, so it never blocks anything) - which reads exactly
+    // like the block bonking it on the head. Kill it (fades out, see the JSX), then a beat later
+    // pop it back up wherever the stack happens to be tallest right now.
+    const maybeKillCreature = (
+      creatureRef: typeof ele3Ref,
+      setCreature: typeof setEle3,
+      blockCol: number,
+      blockCols: number
+    ) => {
+      const c = creatureRef.current;
+      if (!c || !c.alive) return;
+      if (c.col < blockCol || c.col >= blockCol + blockCols) return;
+      const dead = { ...c, alive: false };
+      creatureRef.current = dead;
+      setCreature(dead);
+      after(CREATURE_RESPAWN_MS, () => {
+        const surface = surfaceRef.current;
+        let bestCol = 0;
+        let bestRow = -Infinity;
+        for (let col = 0; col < columns; col++) {
+          if (col === c.col && columns > 1) continue;
+          if (surface[col] > bestRow) {
+            bestRow = surface[col];
+            bestCol = col;
+          }
+        }
+        const respawned: CreatureState = { col: bestCol, row: bestRow, alive: true };
+        creatureRef.current = respawned;
+        setCreature(respawned);
+      });
+    };
+
     const reset = () => {
       setFlood(null);
       setStack([]);
       setActive(null);
       landedRef.current = [];
       surfaceRef.current = [...(skylineRef.current?.surface ?? [])];
+      resetCreatures();
       after(RESET_PAUSE_MS, spawn);
     };
 
@@ -379,6 +447,8 @@ export default function TetrisField({
                   const lift = topLift[i];
                   if (lift !== null) surfaceRef.current[block.col + i] = block.bottom + lift;
                 }
+                maybeKillCreature(ele3Ref, setEle3, block.col, cols);
+                maybeKillCreature(ele5Ref, setEle5, block.col, cols);
                 setActive(null);
                 after(LAND_PAUSE_MS, spawn);
               });
@@ -400,6 +470,10 @@ export default function TetrisField({
       setStack([]);
       setActive(null);
       setFlood(null);
+      ele3Ref.current = null;
+      ele5Ref.current = null;
+      setEle3(null);
+      setEle5(null);
     };
   }, [columns, skyline]);
 
@@ -411,11 +485,6 @@ export default function TetrisField({
     height: GEOMETRY[shape].height * unit,
   });
 
-  // Both creatures perch on top of whatever the skyline turned out to be under them.
-  const perch = (fraction: number) => {
-    const col = Math.min(columns - 2, Math.max(0, Math.round(columns * fraction)));
-    return { left: col * cell, bottom: (skyline?.surface[col] ?? 0) * cell };
-  };
 
   return (
     <div ref={ref} className="absolute inset-0 overflow-hidden">
@@ -474,22 +543,45 @@ export default function TetrisField({
             />
           ))}
           {/* A few seconds after the first burst finishes a second plays through f-j, 23% taller,
-              growing upward from the same standing baseline. */}
-          <AnimatedElephant
-            secondaryFrames={ELE5_SECONDARY_FRAMES}
-            secondaryScale={1.23}
-            anchor="left"
-            style={{ ...perch(0.8), height: cell * 0.85 * creatureScale }}
-          />
+              growing upward from the same standing baseline. A block landing on this creature's
+              column bonks it off the perch - it fades out, then pops back up wherever the stack
+              is tallest a beat later (see maybeKillCreature above). */}
+          {ele5 && (
+            <AnimatedElephant
+              secondaryFrames={ELE5_SECONDARY_FRAMES}
+              secondaryScale={1.23}
+              anchor="left"
+              className={`origin-bottom-left transition-all ease-out ${
+                ele5.alive ? "scale-100 opacity-100" : "scale-0 opacity-0"
+              }`}
+              style={{
+                left: ele5.col * cell,
+                bottom: ele5.row * cell,
+                height: cell * 0.85 * creatureScale,
+                transitionDuration: `${CREATURE_TRANSITION_MS}ms`,
+              }}
+            />
+          )}
           {/* Frames have different intrinsic widths at a fixed height (a fire breath), so this one
-              grows rightward from a fixed left edge rather than staying centred. */}
-          <AnimatedElephant
-            frames={ELE3_FRAMES}
-            anchor="left"
-            frameIntervalMs={350}
-            repeatCount={2}
-            style={{ ...perch(0.18), height: cell * 0.9 * creatureScale }}
-          />
+              grows rightward from a fixed left edge rather than staying centred. Same bonk/respawn
+              behaviour as the creature above. */}
+          {ele3 && (
+            <AnimatedElephant
+              frames={ELE3_FRAMES}
+              anchor="left"
+              frameIntervalMs={350}
+              repeatCount={2}
+              className={`origin-bottom-left transition-all ease-out ${
+                ele3.alive ? "scale-100 opacity-100" : "scale-0 opacity-0"
+              }`}
+              style={{
+                left: ele3.col * cell,
+                bottom: ele3.row * cell,
+                height: cell * 0.9 * creatureScale,
+                transitionDuration: `${CREATURE_TRANSITION_MS}ms`,
+              }}
+            />
+          )}
         </>
       )}
     </div>
