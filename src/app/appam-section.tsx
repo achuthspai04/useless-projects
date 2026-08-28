@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
+import { SpeechBubbleCreature } from "./speech-bubble-creature";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -239,6 +240,23 @@ export default function AppamSection() {
             </span>
           </button>
         </div>
+
+        <SpeechBubbleCreature
+          left={1190}
+          top={600}
+          bubbleSrc="/timer-bubble.svg"
+          bubbleWidth={157}
+          bubbleHeight={109}
+          creatureLeft={142}
+          creatureTop={92}
+          textLeft={25}
+          textTop={31}
+          textWidth={107}
+        >
+          cool
+          <br />
+          right?
+        </SpeechBubbleCreature>
       </div>
     </section>
   );

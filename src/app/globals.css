@@ -35,3 +35,25 @@ body {
 .animate-float-slow {
   animation: float-slow 6s ease-in-out infinite;
 }
+
+@keyframes timer-dot-pulse {
+  0% {
+    transform: scale(1.2);
+    animation-timing-function: linear;
+  }
+  70.8% {
+    transform: scale(1.2);
+    animation-timing-function: ease-in-out;
+  }
+  95.8% {
+    transform: scale(1);
+    animation-timing-function: linear;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-timer-dot-pulse {
+  animation: timer-dot-pulse 2s infinite;
+}

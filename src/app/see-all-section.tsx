@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { SpeechBubbleCreature } from "./speech-bubble-creature";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -118,6 +119,25 @@ export default function SeeAllSection() {
             (1200)
           </span>
         </button>
+
+        <SpeechBubbleCreature
+          left={960}
+          top={606}
+          bubbleSrc="/funfact-bubble.svg"
+          bubbleWidth={223.257}
+          bubbleHeight={155}
+          creatureLeft={208.257}
+          creatureTop={138}
+          textLeft={12.6}
+          textTop={20}
+          textWidth={198}
+        >
+          fun fact
+          <br />
+          almost all of them
+          <br />
+          made their first build at 1.0
+        </SpeechBubbleCreature>
       </div>
     </section>
   );

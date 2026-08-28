@@ -4,6 +4,7 @@ import CelebratingSection from "./celebrating-section";
 import FaqSection from "./faq-section";
 import HeroDots from "./hero-dots";
 import SeeAllSection from "./see-all-section";
+import TimerSection from "./timer-section";
 import Title from "./title";
 import TetrisSkyline from "./tetris-skyline";
 import WhySection from "./why-section";
@@ -61,6 +62,7 @@ export default function Home() {
       <AppamSection />
       <SeeAllSection />
       <FaqSection />
+      <TimerSection />
     </>
   );
 }
