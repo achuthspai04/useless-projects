@@ -51,6 +51,17 @@ interface Placed {
 }
 interface Falling extends Placed {
   id: number;
+  /** Duration in ms for the *current* leg of the fall (spawn-to-landing, or - after a move -
+   *  wherever it visually was at the moment of the move to the new column's landing row). Stored
+   *  explicitly rather than recomputed from `spawnRow(rows) - bottom` at render time, since that
+   *  formula only holds for the first leg - recomputing it after a move used the full spawn-to-
+   *  new-landing distance instead of the distance actually left to fall, which is what made the
+   *  fall speed change unpredictably after a move. */
+  fallMs: number;
+  /** Row and wall-clock time the current leg started falling from, used to work out how far it's
+   *  actually fallen so far when a move needs to start a new leg. */
+  legStartRow: number;
+  legStartedAt: number;
 }
 interface FloodCell {
   col: number;
@@ -272,6 +283,9 @@ export default function TetrisField({
   const [falling, setFalling] = useState(false);
   const [flood, setFlood] = useState<FloodCell[] | null>(null);
   const surfaceRef = useRef<number[]>([]);
+  // Mirrors `active`, so a key press or swipe can read/move the falling piece without depending on
+  // it (which would restart the whole game loop below on every move).
+  const activeRef = useRef<Falling | null>(null);
   // Mirrors `stack`, so the drop loop can read what has landed without a state updater. Reading
   // it through setStack would mean running the round-end logic inside an updater, and React
   // double-invokes those in StrictMode - which would start two drop loops racing each other.
@@ -352,6 +366,9 @@ export default function TetrisField({
     const timers: number[] = [];
     const frames: number[] = [];
     let cancelled = false;
+    // The timer for the currently-falling piece's landing - tracked so a move mid-fall can cancel
+    // and reschedule it against the new leg's duration instead of leaving the old one to fire late.
+    let landTimerId: number | null = null;
     surfaceRef.current = [...skyline.surface];
     landedRef.current = [];
 
@@ -474,10 +491,100 @@ export default function TetrisField({
           });
         }
       }
+      activeRef.current = null;
       setActive(null);
       setFlood(cells);
       after(rowsRef.current * FLOOD_ROW_STAGGER_MS + FLOOD_HOLD_MS, reset);
     };
+
+    // Runs once a piece finishes falling, wherever it ended up (its spawn column or, after a
+    // move, wherever it was shifted to). Updates the stack/surface, then either ends the round or
+    // spawns the next piece.
+    const land = (landed: Falling) => {
+      landedRef.current = [...landedRef.current, landed];
+      setStack(landedRef.current);
+      const { cols, topLift } = GEOMETRY[landed.shape];
+      for (let i = 0; i < cols; i++) {
+        const lift = topLift[i];
+        if (lift !== null) surfaceRef.current[landed.col + i] = landed.bottom + lift;
+      }
+      maybeKillCreature(ele3Ref, setEle3, ele5Ref, landed.col, cols);
+      maybeKillCreature(ele5Ref, setEle5, ele3Ref, landed.col, cols);
+      activeRef.current = null;
+      setActive(null);
+      // End the round the instant any single column's stack reaches the top of the screen, rather
+      // than waiting until literally no column anywhere has room - a lone short column (easy to
+      // leave behind once pieces can be steered sideways) would otherwise let the round drag on
+      // well past the point it visually looks finished.
+      if (Math.max(...surfaceRef.current) >= rowsRef.current) {
+        floodAndReset();
+      } else {
+        after(LAND_PAUSE_MS, spawn);
+      }
+    };
+
+    // Moves the falling piece one column left/right (arrow keys on desktop, swipe on mobile - see
+    // the listeners below). Just shifts it and re-reads the landing height for the new column off
+    // the same surface everything else already uses, so it still rests flush wherever it ends up.
+    // The vertical fall keeps going at the same constant rate across the move: it works out how
+    // far the piece has actually fallen so far (from legStartRow/legStartedAt) and starts a fresh
+    // leg from there to the new landing row, rescheduling the landing timer to match - rather than
+    // reusing the old spawn-to-landing duration/timer, which is what made the speed go erratic.
+    const moveActive = (delta: number) => {
+      const cur = activeRef.current;
+      if (!cur) return;
+      const { cols, rows: shapeRows } = GEOMETRY[cur.shape];
+      const newCol = Math.max(0, Math.min(columns - cols, cur.col + delta));
+      if (newCol === cur.col) return;
+      const newBottom = landingRow(surfaceRef.current, newCol, cur.shape);
+      // Don't shift into a column stacked so high the piece would land above the screen - the same
+      // ceiling the spawn picker already respects.
+      if (newBottom + shapeRows > rowsRef.current) return;
+
+      const elapsed = Date.now() - cur.legStartedAt;
+      const currentRow = cur.legStartRow - FALL_ROWS_PER_MS * elapsed;
+      const fallMs = Math.max(1, (currentRow - newBottom) / FALL_ROWS_PER_MS);
+      const moved: Falling = {
+        ...cur,
+        col: newCol,
+        bottom: newBottom,
+        fallMs,
+        legStartRow: currentRow,
+        legStartedAt: Date.now(),
+      };
+      activeRef.current = moved;
+      setActive(moved);
+      if (landTimerId !== null) clearTimeout(landTimerId);
+      landTimerId = window.setTimeout(() => {
+        if (!cancelled) land(activeRef.current ?? moved);
+      }, fallMs);
+      timers.push(landTimerId);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      // Ignore the OS's auto-repeat while a key is held - one press should move one column, not
+      // several in a burst.
+      if (e.repeat) return;
+      if (e.key === "ArrowLeft") moveActive(-1);
+      else if (e.key === "ArrowRight") moveActive(1);
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    let touchStartX: number | null = null;
+    const SWIPE_THRESHOLD_PX = 30;
+    const onTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0]?.clientX ?? null;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (touchStartX === null) return;
+      const dx = (e.changedTouches[0]?.clientX ?? touchStartX) - touchStartX;
+      touchStartX = null;
+      if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+      moveActive(dx > 0 ? 1 : -1);
+    };
+    const fieldEl = ref.current;
+    fieldEl?.addEventListener("touchstart", onTouchStart, { passive: true });
+    fieldEl?.addEventListener("touchend", onTouchEnd, { passive: true });
 
     const spawn = () => {
       if (cancelled) return;
@@ -508,8 +615,9 @@ export default function TetrisField({
       const palette = LEGO_COLOR_NAMES.filter((c) => c !== lastColorRef.current);
       const color = palette[Math.floor(Math.random() * palette.length)];
       lastColorRef.current = color;
-      const block = { id: idRef.current++, color, ...spot };
+      const block: Falling = { id: idRef.current++, color, ...spot, fallMs: 0, legStartRow: 0, legStartedAt: 0 };
 
+      activeRef.current = block;
       setActive(block);
       setFalling(false);
 
@@ -520,22 +628,20 @@ export default function TetrisField({
           frames.push(
             requestAnimationFrame(() => {
               if (cancelled) return;
+              const legStartRow = spawnRow(limit);
+              const fallMs = (legStartRow - block.bottom) / FALL_ROWS_PER_MS;
+              const started: Falling = { ...block, fallMs, legStartRow, legStartedAt: Date.now() };
+              activeRef.current = started;
+              setActive(started);
               setFalling(true);
               // Driven by a timer rather than `transitionend` so a throttled or backgrounded tab
               // that never fires the event can't strand the loop with nothing falling.
-              after((spawnRow(limit) - block.bottom) / FALL_ROWS_PER_MS, () => {
-                landedRef.current = [...landedRef.current, block];
-                setStack(landedRef.current);
-                const { cols, topLift } = GEOMETRY[block.shape];
-                for (let i = 0; i < cols; i++) {
-                  const lift = topLift[i];
-                  if (lift !== null) surfaceRef.current[block.col + i] = block.bottom + lift;
-                }
-                maybeKillCreature(ele3Ref, setEle3, ele5Ref, block.col, cols);
-                maybeKillCreature(ele5Ref, setEle5, ele3Ref, block.col, cols);
-                setActive(null);
-                after(LAND_PAUSE_MS, spawn);
-              });
+              landTimerId = window.setTimeout(() => {
+                // Read the current (possibly moved-since-spawn) position rather than the spot this
+                // closure captured, so a piece nudged sideways lands where it's actually sitting.
+                if (!cancelled) land(activeRef.current ?? started);
+              }, fallMs);
+              timers.push(landTimerId);
             })
           );
         })
@@ -548,10 +654,14 @@ export default function TetrisField({
       cancelled = true;
       timers.forEach(clearTimeout);
       frames.forEach(cancelAnimationFrame);
+      window.removeEventListener("keydown", onKeyDown);
+      fieldEl?.removeEventListener("touchstart", onTouchStart);
+      fieldEl?.removeEventListener("touchend", onTouchEnd);
       // StrictMode mounts effects twice in dev; drop the discarded run's blocks so they don't
       // linger as a frozen stack alongside the real run's.
       landedRef.current = [];
       setStack([]);
+      activeRef.current = null;
       setActive(null);
       setFlood(null);
       ele3Ref.current = null;
@@ -608,9 +718,7 @@ export default function TetrisField({
               style={{
                 ...place(active),
                 bottom: (falling ? active.bottom : spawnRow(rows)) * cell,
-                transition: falling
-                  ? `bottom ${(spawnRow(rows) - active.bottom) / FALL_ROWS_PER_MS}ms linear`
-                  : "none",
+                transition: falling ? `bottom ${active.fallMs}ms linear` : "none",
               }}
             />
           )}
