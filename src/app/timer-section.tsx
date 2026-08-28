@@ -32,10 +32,33 @@ function remainingUntilEvent() {
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
 }
 
+// Same target cell sizes the hero's own fields use, so the reveal's blocks come out the size
+// visitors have already seen on the way down (see page.tsx and mobile-hero.tsx).
+const DESKTOP_TARGET_CELL = 68;
+const MOBILE_TARGET_CELL = 22;
+
 export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
   // a server-computed countdown against a client one computed moments later.
   const [remaining, setRemaining] = useState<{ hours: number; minutes: number } | null>(null);
+  const [revealed, setRevealed] = useState(false);
+
+  // The button sits inside each breakpoint's scaled canvas so it tracks the design, while the
+  // reveal itself covers the whole section - hence one shared flag rather than local state. `top`
+  // is per-breakpoint because the countdown above it ends at a different height in each canvas
+  // (desktop: 310 + 130; mobile: 115 + two ~95px lines).
+  const curiosityButton = (top: number) => (
+    <button
+      type="button"
+      onClick={() => setRevealed(true)}
+      className={`font-nanum-pen absolute left-1/2 -translate-x-1/2 cursor-pointer items-center justify-center bg-black text-white shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#1a1a1a] active:translate-y-0.5 active:scale-[0.97] select-none ${
+        revealed ? "pointer-events-none opacity-0" : "flex opacity-100"
+      }`}
+      style={{ top: `${top}px`, width: "180px", height: "48px", fontSize: "24px" }}
+    >
+      curiosity?
+    </button>
+  );
 
   useEffect(() => {
     setRemaining(remainingUntilEvent());
@@ -93,15 +116,7 @@ export default function TimerSection() {
           )}
         </p>
 
-        <CuriosityReveal
-          width={MOBILE_WIDTH}
-          height={MOBILE_HEIGHT}
-          targetCell={62}
-          buttonTop={350}
-          buttonWidth={160}
-          buttonHeight={44}
-          buttonFontSize={20}
-        />
+        {curiosityButton(330)}
       </div>
 
       <div
@@ -144,16 +159,21 @@ export default function TimerSection() {
           {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
 
-        <CuriosityReveal
-          width={REF_WIDTH}
-          height={REF_HEIGHT}
-          targetCell={128}
-          buttonTop={490}
-          buttonWidth={220}
-          buttonHeight={56}
-          buttonFontSize={28}
-        />
+        {curiosityButton(490)}
       </div>
+
+      {/* Outside both scaled canvases so the board fills the real section rather than the design's
+          reference box - the same placement the hero gives its own field. */}
+      {revealed && (
+        <>
+          <div className="absolute inset-0 z-10 lg:hidden">
+            <CuriosityReveal targetCell={MOBILE_TARGET_CELL} onClose={() => setRevealed(false)} />
+          </div>
+          <div className="absolute inset-0 z-10 hidden lg:block">
+            <CuriosityReveal targetCell={DESKTOP_TARGET_CELL} onClose={() => setRevealed(false)} />
+          </div>
+        </>
+      )}
     </section>
   );
 }
