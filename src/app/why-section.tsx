@@ -33,9 +33,47 @@ const VIDEO_HEIGHT_PX = 233.006;
 // pair can move together as one flex item instead of both needing independent absolute offsets.
 const ARROW_OFFSET_LEFT_PX = 216 - 418;
 
+// Same hand-drawn squiggle underline as CelebratingSection's "why nots.", built in real pixels
+// (not a stretched viewBox) so the stroke stays a uniform width - kept local rather than shared
+// since the two sections tune the wave slightly differently.
+const UNDERLINE_AMPLITUDE = 4;
+const UNDERLINE_WAVELENGTH = 24;
+const UNDERLINE_BASELINE = 6;
+const UNDERLINE_HEIGHT = 12;
+
+function buildSquigglePath(width: number) {
+  if (width <= 0) return "";
+  let d = `M0,${UNDERLINE_BASELINE}`;
+  let x = 0;
+  let crestUp = true;
+  const halfWave = UNDERLINE_WAVELENGTH / 2;
+  while (x < width) {
+    const nextX = Math.min(x + halfWave, width);
+    const midX = (x + nextX) / 2;
+    const midY = UNDERLINE_BASELINE + (crestUp ? -UNDERLINE_AMPLITUDE : UNDERLINE_AMPLITUDE);
+    d += ` Q${midX},${midY} ${nextX},${UNDERLINE_BASELINE}`;
+    x = nextX;
+    crestUp = !crestUp;
+  }
+  return d;
+}
+
 export default function WhySection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const textRef = useRef<HTMLParagraphElement>(null);
   const [arrowDrawn, setArrowDrawn] = useState(false);
+  const [underlineWidth, setUnderlineWidth] = useState(0);
+
+  useEffect(() => {
+    const measure = () => {
+      if (textRef.current) setUnderlineWidth(textRef.current.offsetWidth);
+    };
+    measure();
+    // The Drowner font swaps in after first paint, which can shift the text's rendered width.
+    document.fonts?.ready.then(measure);
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   useEffect(() => {
     const node = sectionRef.current;
@@ -140,12 +178,39 @@ export default function WhySection() {
 
         <div className="flex h-full flex-col items-center justify-center" style={{ gap: `${STACK_GAP_PX}px` }}>
           <div className="flex items-center justify-center" style={{ width: "132.286px", height: "88.865px" }}>
-            <p
-              className="font-drowner relative flex-none rotate-[3.13deg] text-center text-[58.602px] leading-[1.4] lowercase whitespace-nowrap text-[#242525] underline decoration-wavy decoration-from-font"
-              style={{ wordBreak: "break-word", textUnderlinePosition: "from-font" }}
-            >
-              why ?
-            </p>
+            <div className="relative flex-none rotate-[3.13deg]">
+              <p
+                ref={textRef}
+                className="font-drowner relative text-center text-[58.602px] leading-[1.4] lowercase whitespace-nowrap text-[#242525]"
+                style={{ wordBreak: "break-word" }}
+              >
+                why ?
+              </p>
+              {/* Hand-drawn wavy underline, scribbled in alongside the arrow below when the
+                  section scrolls into view (see the IntersectionObserver above). */}
+              <svg
+                width={underlineWidth}
+                height={UNDERLINE_HEIGHT}
+                viewBox={`0 0 ${underlineWidth} ${UNDERLINE_HEIGHT}`}
+                className="pointer-events-none absolute left-0"
+                style={{ top: "calc(100% - 10px)" }}
+                aria-hidden="true"
+              >
+                <path
+                  d={buildSquigglePath(underlineWidth)}
+                  fill="none"
+                  stroke="#242525"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  pathLength={100}
+                  style={{
+                    strokeDasharray: 100,
+                    strokeDashoffset: arrowDrawn ? 0 : 100,
+                    transition: `stroke-dashoffset ${ARROW_DRAW_DURATION_S}s ease-out`,
+                  }}
+                />
+              </svg>
+            </div>
           </div>
 
           <p
@@ -171,6 +236,7 @@ export default function WhySection() {
                 width: "102.33px",
                 height: "100.258px",
                 clipPath: arrowDrawn ? "inset(0% 0% 0% 0%)" : "inset(0% 0% 100% 0%)",
+                transition: `clip-path ${ARROW_DRAW_DURATION_S}s ease-out`,
               }}
             />
 
