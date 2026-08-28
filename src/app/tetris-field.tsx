@@ -215,12 +215,18 @@ const spawnRow = (rows: number) => rows + 3;
 export default function TetrisField({
   targetCell,
   prefill = 0,
+  creatureScale = 1,
 }: {
   /** Preferred cell size in px; the column count is derived from it and the measured width. */
   targetCell: number;
   /** Fraction of the screen's height already stacked when the visitor arrives. 0 leaves just the
    *  low base course. */
   prefill?: number;
+  /** Extra multiplier on top of the two perched creatures' cell-relative height. They're sized
+   *  relative to the lego block grid by design, but at mobile's much smaller targetCell that reads
+   *  as too tiny to read - this lets a caller boost them back up without touching the block grid
+   *  itself. */
+  creatureScale?: number;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -473,7 +479,7 @@ export default function TetrisField({
             secondaryFrames={ELE5_SECONDARY_FRAMES}
             secondaryScale={1.23}
             anchor="left"
-            style={{ ...perch(0.8), height: cell * 0.85 }}
+            style={{ ...perch(0.8), height: cell * 0.85 * creatureScale }}
           />
           {/* Frames have different intrinsic widths at a fixed height (a fire breath), so this one
               grows rightward from a fixed left edge rather than staying centred. */}
@@ -482,7 +488,7 @@ export default function TetrisField({
             anchor="left"
             frameIntervalMs={350}
             repeatCount={2}
-            style={{ ...perch(0.18), height: cell * 0.9 }}
+            style={{ ...perch(0.18), height: cell * 0.9 * creatureScale }}
           />
         </>
       )}

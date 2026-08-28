@@ -27,7 +27,7 @@ export default function MobileHero() {
     // this wrapper's own bottom edge - would land below the fold instead of the visual bottom.
     <div className="relative flex h-screen h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden lg:hidden">
       {/* Reduced prefill to 0.15 for lower initial lego/tetris skyline coverage on mobile */}
-      <TetrisField targetCell={22} prefill={0.15} />
+      <TetrisField targetCell={22} prefill={0.15} creatureScale={2} />
       <div
         className="relative shrink-0"
         style={{
