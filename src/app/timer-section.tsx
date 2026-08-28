@@ -187,7 +187,10 @@ export default function TimerSection() {
         <>
           {/* Mobile's cells are a third the size of desktop's, so its cards take a proportionally
               bigger footprint (still 2:3) to come out physically similar. */}
-          <div className="absolute inset-0 z-10 lg:hidden">
+          {/* Above FloatingPet's z-50: the section is position:relative with z-index auto, so it
+              doesn't box these in - they and the fixed pet both resolve against the root, and the
+              board has to cover it rather than the pet sitting on top of the reveal. */}
+          <div className="absolute inset-0 z-[60] lg:hidden">
             <CuriosityReveal
               targetCell={MOBILE_TARGET_CELL}
               cardCols={4}
@@ -195,7 +198,7 @@ export default function TimerSection() {
               showCards={showCards}
             />
           </div>
-          <div className="absolute inset-0 z-10 hidden lg:block">
+          <div className="absolute inset-0 z-[60] hidden lg:block">
             <CuriosityReveal
               targetCell={DESKTOP_TARGET_CELL}
               cardCols={2}
