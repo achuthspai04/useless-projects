@@ -53,8 +53,9 @@ export default function MobileHero() {
           style={{ left: "48px", top: "140px", height: "48px" }}
         />
 
-        {/* 3.0 Badge positioned top-right relative to centered title */}
-        <div className="absolute text-center" style={{ left: "352px", top: "231px", width: "76px" }}>
+        {/* 3.0 Badge positioned top-right relative to centered title. Floats with its perched
+            creature, the same bob the desktop badge gets (see title.tsx). */}
+        <div className="animate-float-slow absolute text-center" style={{ left: "352px", top: "231px", width: "76px" }}>
           <Image
             src="/ele1.webp"
             alt=""
