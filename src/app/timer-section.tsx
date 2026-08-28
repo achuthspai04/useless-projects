@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CuriosityReveal from "./curiosity-reveal";
 import { HoverDot } from "./hover-dot";
 
 const REF_WIDTH = 1280;
@@ -91,6 +92,16 @@ export default function TimerSection() {
             " "
           )}
         </p>
+
+        <CuriosityReveal
+          width={MOBILE_WIDTH}
+          height={MOBILE_HEIGHT}
+          targetCell={62}
+          buttonTop={350}
+          buttonWidth={160}
+          buttonHeight={44}
+          buttonFontSize={20}
+        />
       </div>
 
       <div
@@ -132,6 +143,16 @@ export default function TimerSection() {
         >
           {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
+
+        <CuriosityReveal
+          width={REF_WIDTH}
+          height={REF_HEIGHT}
+          targetCell={128}
+          buttonTop={490}
+          buttonWidth={220}
+          buttonHeight={56}
+          buttonFontSize={28}
+        />
       </div>
     </section>
   );
