@@ -121,15 +121,11 @@ function driftBounds(canvasHeight: number, tops: number[], bottoms: number[]): C
   } as CSSProperties;
 }
 
+// Desktop only - see the mobile canvas below for why the handover doesn't run there.
 const DESKTOP_DRIFT = driftBounds(
   REF_HEIGHT,
   BOARDS.map((b) => b.desktop.top),
   BOARDS.map((b) => b.desktop.top + b.height)
-);
-const MOBILE_DRIFT = driftBounds(
-  MOBILE_HEIGHT,
-  BOARDS.map((b) => b.mobile.top),
-  BOARDS.map((b) => b.mobile.top + b.height * b.mobile.scale)
 );
 
 // Time between each letter appearing, so the headline reads as being typed out rather than
@@ -485,28 +481,40 @@ export default function AppamSection() {
   );
 
   return (
-    // As many viewports tall as there are projects, with a snap stop at each one, so the mandatory
-    // snapping settles on a project rather than mid-handover. The composition itself is pinned to
-    // the viewport by the sticky stage while that height scrolls past underneath.
-    <section ref={sectionRef} className="relative w-full bg-white" style={{ height: `${PROJECTS.length * 100}vh` }}>
-      {PROJECTS.map((_, i) => (
-        <div
-          key={i}
-          className="pointer-events-none absolute left-0 h-screen w-px snap-start"
-          style={{ top: `${i * 100}vh` }}
-          aria-hidden="true"
-        />
-      ))}
+    // Desktop is as many viewports tall as there are projects, with a snap stop at each one, so the
+    // mandatory snapping settles on a project rather than mid-handover - see appam-scroll-stage in
+    // globals.css for the height, which only grows past 100vh from lg up. Mobile stays a single
+    // screen: the sticky stage below always shows the frame's own composition there (see the mobile
+    // canvas), so there is nothing to scroll past.
+    <section
+      ref={sectionRef}
+      className="appam-scroll-stage relative w-full bg-white"
+      style={{ "--appam-project-count": PROJECTS.length } as CSSProperties}
+    >
+      {PROJECTS.map(
+        (_, i) =>
+          i > 0 && (
+            <div
+              key={i}
+              className="pointer-events-none absolute left-0 hidden h-screen w-px snap-start lg:block"
+              style={{ top: `${i * 100}vh` }}
+              aria-hidden="true"
+            />
+          )
+      )}
 
       <div
         ref={stageRef}
         className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden bg-white"
       >
-        {/* Mobile (Figma nodes 147:9699 + 147:9722 + 147:9728). */}
+        {/* Mobile (Figma nodes 147:9699 + 147:9722 + 147:9728). Always the first project, fixed -
+            the frame only ever defines one, and the scroll-driven handover the desktop canvas below
+            uses needs room this frame doesn't have: parking the next set below the frame took less
+            travel than the viewport's actual height, so it was visible under the boards before any
+            scrolling happened. Simplest fix, and it matches the frame: mobile just shows it. */}
         <div
           className="relative shrink-0 lg:hidden"
           style={{
-            ...MOBILE_DRIFT,
             width: `${MOBILE_WIDTH}px`,
             height: `${MOBILE_HEIGHT}px`,
             transform: `scale(min(1, calc(100vw / ${MOBILE_WIDTH}px)))`,
@@ -515,7 +523,18 @@ export default function AppamSection() {
         >
           {/* The boards go behind the copy at this size: the frame packs them in tight enough that
               the upper one crosses the headline and the lower one the tail of the quote. */}
-          {stage(boardSet, (board) => board.mobile, mobileText)}
+          {BOARDS.map((board, slot) => (
+            <ProjectBoard
+              key={board.stand}
+              board={board}
+              photo={PROJECT_PHOTOS[0][slot]}
+              left={board.mobile.left}
+              top={board.mobile.top}
+              scale={board.mobile.scale}
+              entrance={entrance}
+            />
+          ))}
+          {mobileText(PROJECTS[0], "1")}
         </div>
 
         <div

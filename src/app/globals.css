@@ -29,6 +29,19 @@ html:has([data-page="handbook"]) {
   scroll-snap-type: none;
 }
 
+/* appam-section.tsx: the scroll-driven project handover only runs from lg up, where the desktop
+   canvas fills close enough to the full viewport for "parked below the frame" to also mean
+   "off-screen". On narrower viewports the section is a plain single screen. */
+.appam-scroll-stage {
+  height: 100vh;
+}
+
+@media (min-width: 1024px) {
+  .appam-scroll-stage {
+    height: calc(var(--appam-project-count, 1) * 100vh);
+  }
+}
+
 @keyframes float-slow {
   0%,
   100% {
