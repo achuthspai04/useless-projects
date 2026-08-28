@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import TetrisField from "./tetris-field";
 
 // Figma node 337:386 ("Frame 74"), reproduced at its own 120x180 size and scaled to whatever the
@@ -83,9 +84,10 @@ function DateCard({ slot, day, scale }: { slot: number; day: string; scale: numb
 }
 
 /**
- * The cards as patches of the lego board: each covers `cardCols` x `cardRows` cells, leaving the
- * same one-unit seam between neighbours that the studs do. Rows are chunked per slot so a slot
- * never straddles two rows, and each row is centred on the field.
+ * The cards as patches of the lego board, scattered across it: each covers `cardCols` x `cardRows`
+ * cells and leaves the same one-unit seam between neighbours that the studs do. Spots are drawn at
+ * random and rejected if they'd overlap one already taken, so the dates land somewhere different
+ * every time without ever sitting on top of each other.
  */
 function DateCards({
   columns,
@@ -94,7 +96,6 @@ function DateCards({
   unit,
   cardCols,
   cardRows,
-  perRow,
 }: {
   columns: number;
   rows: number;
@@ -102,51 +103,67 @@ function DateCards({
   unit: number;
   cardCols: number;
   cardRows: number;
-  perRow: number;
 }) {
-  const lines: (typeof SCHEDULE)[number][][] = [];
-  for (const slot of [1, 2]) {
-    const inSlot = SCHEDULE.filter((s) => s.slot === slot);
-    for (let i = 0; i < inSlot.length; i += perRow) lines.push(inSlot.slice(i, i + perRow));
-  }
+  const placed = useMemo(() => {
+    const taken: { col: number; row: number }[] = [];
+    const maxCol = columns - cardCols;
+    const maxRow = rows - cardRows;
+    const free = (col: number, row: number) =>
+      !taken.some(
+        (t) =>
+          col < t.col + cardCols && col + cardCols > t.col && row < t.row + cardRows && row + cardRows > t.row
+      );
 
-  const blockRows = lines.length * cardRows;
-  // `bottom`-anchored like every other block on the board, so the stack of rows is centred and
-  // then read top-down from there.
-  const topRow = Math.max(0, Math.floor((rows - blockRows) / 2)) + blockRows;
+    return SCHEDULE.map((entry) => {
+      let spot: { col: number; row: number } | null = null;
+      for (let attempt = 0; attempt < 300 && !spot; attempt++) {
+        const col = Math.floor(Math.random() * (maxCol + 1));
+        const row = Math.floor(Math.random() * (maxRow + 1));
+        if (free(col, row)) spot = { col, row };
+      }
+      // Random draws can keep colliding once the board is busy; fall back to the first free spot
+      // in a plain scan so a date is never silently dropped.
+      for (let row = 0; row <= maxRow && !spot; row++) {
+        for (let col = 0; col <= maxCol && !spot; col++) {
+          if (free(col, row)) spot = { col, row };
+        }
+      }
+      if (spot) taken.push(spot);
+      return spot ? { ...entry, ...spot } : null;
+    }).filter((c): c is (typeof SCHEDULE)[number] & { col: number; row: number } => c !== null);
+  }, [columns, rows, cardCols, cardRows]);
+
+  const width = cardCols * cell - unit;
 
   return (
     <>
-      {lines.map((line, lineIndex) => {
-        const startCol = Math.max(0, Math.floor((columns - line.length * cardCols) / 2));
-        return line.map((card, i) => (
-          <div
-            key={card.day}
-            className="animate-lego-pop absolute overflow-hidden bg-white"
-            style={{
-              left: (startCol + i * cardCols) * cell,
-              bottom: (topRow - (lineIndex + 1) * cardRows) * cell,
-              width: cardCols * cell - unit,
-              height: cardRows * cell - unit,
-            }}
-          >
-            <DateCard slot={card.slot} day={card.day} scale={(cardCols * cell - unit) / CARD_REF_WIDTH} />
-          </div>
-        ));
-      })}
+      {placed.map((card) => (
+        <div
+          key={card.day}
+          className="animate-lego-pop absolute overflow-hidden bg-white"
+          style={{
+            left: card.col * cell,
+            bottom: card.row * cell,
+            width,
+            height: cardRows * cell - unit,
+          }}
+        >
+          <DateCard slot={card.slot} day={card.day} scale={width / CARD_REF_WIDTH} />
+        </div>
+      ))}
     </>
   );
 }
 
 // The "curiosity?" reveal: fills the whole section with the tetris board's finished state - the
 // exact same TetrisField the hero runs, rendered in its flooded end state (see the `flooded` prop)
-// rather than reimplemented here - with the event dates set into it as white patches.
+// rather than reimplemented here - and then scatters the event dates across it. The caller drives
+// the sequencing (board, then cards, then back to the section); this just renders a given step.
 export default function CuriosityReveal({
   targetCell,
   cardCols,
   cardRows,
-  perRow,
-  onClose,
+  showCards,
 }: {
   /** Passed straight through to TetrisField - the hero uses 68 on desktop and 22 on mobile. */
   targetCell: number;
@@ -154,25 +171,19 @@ export default function CuriosityReveal({
    *  both up together (keeping 2:3) so the cards stay legible against its much smaller cells. */
   cardCols: number;
   cardRows: number;
-  /** How many cards fit on one row before the slot wraps. */
-  perRow: number;
-  onClose: () => void;
+  showCards: boolean;
 }) {
   return (
     <div className="absolute inset-0 z-10 overflow-hidden">
       <TetrisField
         targetCell={targetCell}
         flooded
-        overlay={(grid) => <DateCards {...grid} cardCols={cardCols} cardRows={cardRows} perRow={perRow} />}
+        overlay={
+          showCards
+            ? (grid) => <DateCards {...grid} cardCols={cardCols} cardRows={cardRows} />
+            : undefined
+        }
       />
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="font-nanum-pen absolute right-4 top-4 z-20 flex size-10 items-center justify-center rounded-full bg-black text-2xl text-white shadow-md"
-      >
-        ×
-      </button>
     </div>
   );
 }
