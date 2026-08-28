@@ -469,7 +469,7 @@ export default function AppamSection() {
         href={project.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex cursor-pointer items-center justify-center rounded-[2.215px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 hover:ring-2 hover:ring-[#ea34df]/60 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
+        className="group flex cursor-pointer items-center justify-center rounded-[2.215px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
         style={{ width: "160.29px", height: "46.327px" }}
       >
         <span className="font-drowner text-[#0e0e0d] transition-transform duration-200 group-hover:scale-105" style={{ fontSize: "29.45px", letterSpacing: "0.589px" }}>
@@ -500,7 +500,7 @@ export default function AppamSection() {
         href={project.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="group flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 hover:ring-2 hover:ring-[#ea34df]/60 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
+        className="group flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
         style={{ width: "346px", height: "100px" }}
       >
         <span className="font-drowner text-[#0e0e0d] transition-transform duration-200 group-hover:scale-105" style={{ fontSize: "63.57px", letterSpacing: "1.2714px" }}>
