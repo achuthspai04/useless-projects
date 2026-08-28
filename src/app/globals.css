@@ -36,6 +36,22 @@ body {
   animation: float-slow 6s ease-in-out infinite;
 }
 
+/* Each cell of the end-of-round flood fill pops in, staggered by row so the fill sweeps upward. */
+@keyframes lego-pop {
+  from {
+    transform: scale(0.2);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-lego-pop {
+  animation: lego-pop 200ms ease-out both;
+}
+
 @keyframes timer-dot-pulse {
   0% {
     transform: scale(1.2);

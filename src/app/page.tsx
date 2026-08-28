@@ -10,7 +10,7 @@ import RevealButton from "./reveal-button";
 import SeeAllSection from "./see-all-section";
 import TimerSection from "./timer-section";
 import Title from "./title";
-import TetrisSkyline from "./tetris-skyline";
+import TetrisField from "./tetris-field";
 import WhySection from "./why-section";
 
 // ele4e.webp doesn't exist in public/ - the transition skips from d straight to f.
@@ -25,9 +25,9 @@ export default function Home() {
       <MobileHero />
       <div className="relative hidden min-h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:flex">
         {/* Rendered before the canvas below (and so painted behind it) to match the Figma layer
-            order - the title/button/badges sit above the tetris skyline, which they slightly
+            order - the title/button/badges sit above the tetris field, which they slightly
             overlap by design (e.g. the reveal button sits right at the skyline's edge). */}
-        <TetrisSkyline />
+        <TetrisField targetCell={68} />
         <div
           className="absolute"
           style={{

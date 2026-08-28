@@ -1,13 +1,13 @@
 import Image from "next/image";
 import AnimatedElephant from "./animated-elephant";
+import HeroTagline from "./hero-tagline";
 import { HoverDot } from "./hover-dot";
-import MobileTetrisSkyline from "./mobile-tetris-skyline";
+import RevealButton from "./reveal-button";
+import TetrisField from "./tetris-field";
 
 // ele4e.webp doesn't exist in public/ - the transition skips from d straight to f (same gap the
 // desktop hero works around).
 const ELE4_FRAMES = ["/ele4a.webp", "/ele4b.webp", "/ele4c.webp", "/ele4d.webp", "/ele4f.webp"];
-const ELE3_FRAMES = ["/ele3a.webp", "/ele3b.webp", "/ele3c.webp", "/ele3d.webp"];
-const ELE5_SECONDARY_FRAMES = ["/ele5f.webp", "/ele5g.webp", "/ele5h.webp", "/ele5i.webp", "/ele5j.webp"];
 const DOT_ASSETS = ["/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
 // The mobile Figma frame (node 147:9496, "iPhone 16 & 17 Pro - 1") is 402px wide; everything
@@ -26,6 +26,11 @@ export default function MobileHero() {
     // if this wrapper could grow past one screen to fit that box, TetrisSkyline - pinned to
     // this wrapper's own bottom edge - would land below the fold instead of the visual bottom.
     <div className="relative flex h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:hidden">
+      {/* Sits on this wrapper rather than inside the scaled canvas below, so it fills the actual
+          phone viewport and works off real pixels - the same field the desktop hero uses, just
+          with a smaller target cell so a narrow screen still gets a sensible column count. It's
+          rendered first, and so painted behind, the canvas that follows. */}
+      <TetrisField targetCell={22} prefill={0.3} />
       <div
         className="relative shrink-0"
         style={{
@@ -74,31 +79,11 @@ export default function MobileHero() {
           <p>Projects</p>
         </div>
 
-        <MobileTetrisSkyline />
-
-        {/* Fire-breather perched on the orange-c tetris piece. */}
-        <AnimatedElephant
-          frames={ELE3_FRAMES}
-          anchor="left"
-          frameIntervalMs={350}
-          repeatCount={2}
-          style={{ left: "120px", top: "659.77px", height: "43.749px" }}
-        />
-
-        {/* Idles on the new purple-c piece placed above the cyan-b block. */}
-        <AnimatedElephant
-          secondaryFrames={ELE5_SECONDARY_FRAMES}
-          secondaryScale={1.23}
-          anchor="left"
-          style={{ left: "320px", top: "628.5px", height: "51.983px" }}
-        />
-
-        <p
-          className="font-nanum-pen absolute text-center text-black"
-          style={{ left: "342px", top: "786px", width: "108px", fontSize: "14.786px", lineHeight: "12px", transform: "translateX(-50%)" }}
-        >
-          exclusive to Tinkerhub campus community
-        </p>
+        {/* Same arrangement as the desktop hero - the tagline centred on one line directly above
+            the reveal button - but sized for this 402px-wide canvas, and sat high enough that
+            neither is buried under the standing blocks on arrival. */}
+        <HeroTagline top={524} width={402} fontSize={14.786} lineHeight={12} />
+        <RevealButton top={556} width={252} height={62} fontSize={29} lineHeight={24} />
       </div>
     </div>
   );
