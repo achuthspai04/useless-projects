@@ -25,12 +25,9 @@ export default function MobileHero() {
     // 402x1098 layout box (shrink-0, so the transform below is the only thing scaling it), and
     // if this wrapper could grow past one screen to fit that box, TetrisSkyline - pinned to
     // this wrapper's own bottom edge - would land below the fold instead of the visual bottom.
-    <div className="relative flex h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:hidden">
-      {/* Sits on this wrapper rather than inside the scaled canvas below, so it fills the actual
-          phone viewport and works off real pixels - the same field the desktop hero uses, just
-          with a smaller target cell so a narrow screen still gets a sensible column count. It's
-          rendered first, and so painted behind, the canvas that follows. */}
-      <TetrisField targetCell={22} prefill={0.3} />
+    <div className="relative flex h-screen h-[100dvh] shrink-0 snap-start snap-always items-center justify-center overflow-hidden lg:hidden">
+      {/* Reduced prefill to 0.15 for lower initial lego/tetris skyline coverage on mobile */}
+      <TetrisField targetCell={22} prefill={0.15} />
       <div
         className="relative shrink-0"
         style={{
@@ -45,8 +42,7 @@ export default function MobileHero() {
         <HoverDot assets={DOT_ASSETS} baseIndex={3} size={20.16} className="absolute" style={{ left: "404.28px", top: "144px" }} />
         <HoverDot assets={DOT_ASSETS} baseIndex={2} size={39.28} className="absolute" style={{ left: "13px", top: "513.856px" }} />
 
-        {/* Standalone creature, top-left - not paired with the tagline (which sits alone near
-            the tetris further down). */}
+        {/* Standalone creature, top-left */}
         <AnimatedElephant
           frames={ELE4_FRAMES}
           frameIntervalMs={450}
@@ -57,10 +53,8 @@ export default function MobileHero() {
           style={{ left: "48px", top: "140px", height: "48px" }}
         />
 
-        {/* Nudged down and in from the Figma spot (326, 205), which left it stranded up in the
-            corner - it now sits just off the title's top-right, and the little creature above it
-            comes along since it's positioned within this same box. */}
-        <div className="absolute text-center" style={{ left: "292px", top: "250px", width: "76px" }}>
+        {/* 3.0 Badge positioned top-right relative to centered title */}
+        <div className="absolute text-center" style={{ left: "296px", top: "270px", width: "76px" }}>
           <Image
             src="/ele1.webp"
             alt=""
@@ -74,21 +68,18 @@ export default function MobileHero() {
           </span>
         </div>
 
+        {/* Useless Projects Title - Centered horizontally and balanced vertically */}
         <div
-          className="font-drowner absolute text-[#0e0e0d]"
-          // Same tight leading as the desktop title (see title.tsx) - the browser default of
-          // ~1.2 left far too much air between "Useless" and "Projects" at this size.
-          style={{ left: "48px", top: "298px", width: "306px", fontSize: "95.245px", letterSpacing: "1.9049px", lineHeight: 0.836 }}
+          className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-[#0e0e0d]"
+          style={{ top: "310px", width: "390px", fontSize: "122px", letterSpacing: "1.9049px", lineHeight: 0.836 }}
         >
           <p>Useless</p>
           <p>Projects</p>
         </div>
 
-        {/* Same arrangement as the desktop hero - the tagline centred on one line directly above
-            the reveal button - but sized for this 402px-wide canvas, and sat high enough that
-            neither is buried under the standing blocks on arrival. */}
-        <HeroTagline top={480} width={402} fontSize={14.786} lineHeight={12} />
-        <RevealButton top={512} width={252} height={62} fontSize={29} lineHeight={24} />
+        {/* Tagline and reveal button centered below title */}
+        <HeroTagline top={530} width={402} fontSize={24} lineHeight={22} />
+        <RevealButton top={570} width={260} height={64} fontSize={29} lineHeight={24} />
       </div>
     </div>
   );

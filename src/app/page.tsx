@@ -13,6 +13,8 @@ import Title from "./title";
 import TetrisField from "./tetris-field";
 import WhySection from "./why-section";
 
+import FloatingPet from "./floating-pet";
+
 // ele4e.webp doesn't exist in public/ - the transition skips from d straight to f.
 const ELE4_FRAMES = ["/ele4a.webp", "/ele4b.webp", "/ele4c.webp", "/ele4d.webp", "/ele4f.webp"];
 
@@ -23,7 +25,7 @@ export default function Home() {
   return (
     <>
       <MobileHero />
-      <div className="relative hidden min-h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:flex">
+      <div className="relative hidden min-h-screen shrink-0 snap-start snap-always items-center justify-center overflow-hidden lg:flex">
         {/* Rendered before the canvas below (and so painted behind it) to match the Figma layer
             order - the title/button/badges sit above the tetris field, which they slightly
             overlap by design (e.g. the reveal button sits right at the skyline's edge). */}
@@ -51,7 +53,7 @@ export default function Home() {
             minDelayMs={50}
             maxDelayMs={150}
             floatAnimation
-            style={{ left: "83.4px", top: "421.2px", height: "100px" }}
+            style={{ left: "83.4px", top: "391.2px", height: "100px" }}
           />
           <Title />
           <HeroTagline />
@@ -66,6 +68,7 @@ export default function Home() {
       <SeeAllSection />
       <FaqSection />
       <TimerSection />
+      <FloatingPet />
     </>
   );
 }

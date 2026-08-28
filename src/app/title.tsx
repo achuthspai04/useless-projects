@@ -12,7 +12,7 @@ export default function Title() {
       }}
     >
       <h1
-        className="font-drowner text-center text-[#0e0e0d]"
+        className="font-drowner text-center text-[#0e0e0d] animate-float-title"
         style={{
           fontSize: "185.22px",
           fontWeight: 342,
@@ -25,7 +25,9 @@ export default function Title() {
       </h1>
       <Floating sensitivity={0.5} easingFactor={0.06} className="pointer-events-none">
         <FloatingElement depth={1} style={{ top: "-188px", right: "-53px" }}>
-          <ElephantBadge />
+          <div className="animate-float-slow">
+            <ElephantBadge />
+          </div>
         </FloatingElement>
       </Floating>
     </div>

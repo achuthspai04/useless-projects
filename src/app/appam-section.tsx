@@ -3,7 +3,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
-import { SpeechBubbleCreature } from "./speech-bubble-creature";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -12,9 +11,10 @@ const REF_HEIGHT = 832;
 // photo boards 147:9722 / 147:9728) rather than the desktop canvas scaled down - the headline
 // breaks over three lines instead of two, and the dot and "cool right?" creature are dropped.
 const MOBILE_WIDTH = 402;
-// The composition runs from the top of the text block (artboard y 2233) to the bottom of the
-// lower photo board (y 2651.379).
-const MOBILE_HEIGHT = 418.379;
+// Expanded from the original 418px Figma frame height to give the two photo boards their own
+// clear zone below the text block (~343px). Both boards sit side-by-side in the bottom ~270px
+// so they never collide with copy at the rest (scroll-start) position.
+const MOBILE_HEIGHT = 640;
 // The text block is authored wider than the artboard and bleeds off both edges; the stage's
 // overflow-hidden is what trims it, exactly as the frame does.
 const MOBILE_TEXT_LEFT = -32;
@@ -41,7 +41,10 @@ const BOARDS = [
     standWidth: 149.5,
     standHeight: 89.006,
     desktop: { left: 163, top: 48 },
-    mobile: { left: 30, top: 6.701, scale: 0.68125 },
+    // Board 1 sits left-of-center in the clear zone below the text block.
+    // Anchored from bottom of the MOBILE_HEIGHT frame so boards stay in their zone
+    // regardless of how tall the text block is above.
+    mobile: { left: 28, top: 400, scale: 0.68125 },
   },
   {
     stand: "/appam-stand-2.svg",
@@ -53,7 +56,8 @@ const BOARDS = [
     standWidth: 149.5,
     standHeight: 116,
     desktop: { left: 872.721, top: 538.607 },
-    mobile: { left: 287, top: 214, scale: 0.84667 },
+    // Board 2 sits right-of-center, slightly lower to echo the staggered desktop arrangement.
+    mobile: { left: 218, top: 420, scale: 0.84667 },
   },
 ] as const;
 
@@ -70,6 +74,7 @@ type Project = {
   // Optional - only the appam project has a Malayalam rendering. Without one the headline simply
   // stays in English rather than looping between languages.
   malayalam?: string;
+  url: string;
 };
 
 // One entry per project. The section is as many viewports tall as there are entries, and scrolling
@@ -84,15 +89,17 @@ const PROJECTS: Project[] = [
     malayalam: "അപ്പം തിന്നാൽ മതി, കുഴിയെണ്ണണ്ട",
     quote:
       "“We didn’t really need this. We just wanted to see if we could make a machine that knew when an appam was in front of it...”",
+    url: "https://github.com/aibelbin/Appam_thinnam",
   },
-  // SAMPLE ENTRY - placeholder copy, here to exercise the handover. Swap in the real project.
   {
-    credit: "Made by: Meera & Team · TinkerHub CET",
-    english: "a mirror that only lies",
-    linesDesktop: ["a mirror that", "only lies"],
-    linesMobile: ["a mirror", "that only", "lies"],
+    credit: "Made by: Noel S & Shamil · CUSAT Kuttanad",
+    english: "malambambu",
+    linesDesktop: ["malambambu"],
+    linesMobile: ["malambambu"],
+    malayalam: "മലമ്പാമ്പ്",
     quote:
-      "“It compliments you regardless of the evidence. We taught it to be honest for one afternoon and nobody stood in front of it again.”",
+      "“മലമ്പാമ്പ് is a Malayalam programming language interpreter where “ഓ. എസ്” makes variables, “പറയൂ” prints, “പറയുക” loops, and “പാടിക്കൂ” gives tea breaks. Like Python, but it speaks Malayalam and enjoys snacks. Nobody asked for it — but we made it anyway!”",
+    url: "https://noel9907.github.io/uslessss/",
   },
 ];
 
@@ -100,7 +107,7 @@ const PROJECTS: Project[] = [
 // them in the opposite order - enough to see the sets change hands while scrolling.
 const PROJECT_PHOTOS: string[][] = [
   ["/pic1.webp", "/pic2.webp"],
-  ["/pic2.webp", "/pic1.webp"],
+  ["/malambambu-1.jpg", "/malambambu-2.jpg"],
 ];
 
 // Driven by the scroll handler below: 0 while a project sits at rest, running to 1 as the next one
@@ -246,6 +253,37 @@ export default function AppamSection() {
   const [headlineLanguage, setHeadlineLanguage] = useState<"english" | "malayalam">("english");
   const [index, setIndex] = useState(0);
 
+  // Mobile drift bounds must be computed at runtime because the mobile frame (MOBILE_HEIGHT ≈ 418px)
+  // is shorter than the phone viewport (~850px). Using a static MOBILE_HEIGHT-based value leaves
+  // the arriving/leaving board sets partially visible at rest. Instead we calculate how far the
+  // boards need to travel (in the frame's unscaled coordinate space) so they start/end fully
+  // outside the visible area on whatever device is rendering.
+  const [mobileDrift, setMobileDrift] = useState<CSSProperties>({} as CSSProperties);
+
+  useEffect(() => {
+    const compute = () => {
+      const scale = Math.min(1, window.innerWidth / MOBILE_WIDTH);
+      // Viewport height expressed in the frame's unscaled coordinate units.
+      const frameSpaceVh = window.innerHeight / scale;
+      const tops = BOARDS.map((b) => b.mobile.top);
+      // Layout bottoms use the board's full height (transform doesn't affect layout box).
+      const bottoms = BOARDS.map((b) => b.mobile.top + b.height);
+      // The frame is centered in the sticky stage, so frame top (in frame units) is below the
+      // viewport top by (frameSpaceVh - MOBILE_HEIGHT) / 2.
+      const frameOffsetY = (frameSpaceVh - MOBILE_HEIGHT) / 2;
+      // Arriving set must start below the viewport bottom; leaving set must end above viewport top.
+      const driftFrom = frameSpaceVh - Math.min(...tops) - frameOffsetY;
+      const driftTo = -(Math.max(...bottoms) + frameOffsetY);
+      setMobileDrift({
+        "--board-drift-from": `${driftFrom}px`,
+        "--board-drift-to": `${driftTo}px`,
+      } as CSSProperties);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, []);
+
   useEffect(() => {
     const node = sectionRef.current;
     if (!node) return;
@@ -342,7 +380,8 @@ export default function AppamSection() {
       fontSize,
       letterSpacing,
       malayalam,
-    }: { fontSize: number; letterSpacing: number; malayalam: { fontSize: number; width: number } }
+      malayalamTopOffset = 0,
+    }: { fontSize: number; letterSpacing: number; malayalam: { fontSize: number; width: number }; malayalamTopOffset?: number }
   ) => {
     const showMalayalam = Boolean(project.malayalam) && headlineLanguage === "malayalam";
     return (
@@ -376,7 +415,7 @@ export default function AppamSection() {
             className="absolute font-bold text-[#121211]"
             style={{
               left: "50%",
-              top: 0,
+              top: malayalamTopOffset,
               width: `${malayalam.width}px`,
               transform: "translateX(-50%)",
               fontSize: `${malayalam.fontSize}px`,
@@ -407,12 +446,15 @@ export default function AppamSection() {
           {project.credit}
         </p>
         {/* Authored wider than the text block it sits in, so the headline overhangs it evenly
-            either side - the same relationship the desktop frame uses (1180 inside 982). */}
-        <div className="relative" style={{ width: "530.356px", height: "180.321px" }}>
+            either side - the same relationship the desktop frame uses (1180 inside 982).
+            Height computed from line count so single-line projects (malamambu / മലമ്പാമ്പ്)
+            don't leave a large dead gap like the old fixed 180.321px caused. */}
+        <div className="relative" style={{ width: "530.356px", height: `${project.linesMobile.length * 61.628 * 0.9 + 20}px` }}>
           {headline(project, project.linesMobile, {
             fontSize: 61.628,
             letterSpacing: -4.9303,
             malayalam: MALAYALAM_MOBILE,
+            malayalamTopOffset: 20,
           })}
         </div>
         <p
@@ -423,15 +465,17 @@ export default function AppamSection() {
         </p>
       </div>
 
-      <button
-        type="button"
-        className="flex cursor-pointer items-center justify-center rounded-[2.215px] bg-[#d9d9d9] hover:-translate-y-0.5 hover:bg-[#cfcfcf] hover:shadow-md active:translate-y-0"
+      <a
+        href={project.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex cursor-pointer items-center justify-center rounded-[2.215px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 hover:ring-2 hover:ring-[#ea34df]/60 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
         style={{ width: "160.29px", height: "46.327px" }}
       >
-        <span className="font-drowner text-[#0e0e0d]" style={{ fontSize: "29.45px", letterSpacing: "0.589px" }}>
+        <span className="font-drowner text-[#0e0e0d] transition-transform duration-200 group-hover:scale-105" style={{ fontSize: "29.45px", letterSpacing: "0.589px" }}>
           see project
         </span>
-      </button>
+      </a>
     </div>
   );
 
@@ -442,7 +486,7 @@ export default function AppamSection() {
     >
       <div className="flex w-full flex-col items-center gap-2 text-center">
         <p className="font-nanum-pen w-full text-[18.21px] text-black uppercase">{project.credit}</p>
-        <div className="relative" style={{ height: "206px", width: "1180px" }}>
+        <div className="relative" style={{ height: `${project.linesDesktop.length * 114.257 * 0.9 + 20}px`, width: "1180px" }}>
           {headline(project, project.linesDesktop, {
             fontSize: 114.257,
             letterSpacing: -9.1405,
@@ -452,15 +496,17 @@ export default function AppamSection() {
         <p className="font-nanum-pen w-full text-[18.21px] text-black uppercase">{project.quote}</p>
       </div>
 
-      <button
-        type="button"
-        className="flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] hover:-translate-y-0.5 hover:bg-[#cfcfcf] hover:shadow-md active:translate-y-0"
+      <a
+        href={project.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] text-[#0e0e0d] shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#cfcfcf] hover:shadow-xl hover:shadow-black/20 hover:ring-2 hover:ring-[#ea34df]/60 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
         style={{ width: "346px", height: "100px" }}
       >
-        <span className="font-drowner text-[#0e0e0d]" style={{ fontSize: "63.57px", letterSpacing: "1.2714px" }}>
+        <span className="font-drowner text-[#0e0e0d] transition-transform duration-200 group-hover:scale-105" style={{ fontSize: "63.57px", letterSpacing: "1.2714px" }}>
           see project
         </span>
-      </button>
+      </a>
     </div>
   );
 
@@ -488,7 +534,8 @@ export default function AppamSection() {
     // canvas), so there is nothing to scroll past.
     <section
       ref={sectionRef}
-      className="appam-scroll-stage relative w-full bg-white"
+      id="appam-section"
+      className="appam-scroll-stage relative w-full snap-start bg-white"
       style={{ "--appam-project-count": PROJECTS.length } as CSSProperties}
     >
       {PROJECTS.map(
@@ -496,7 +543,7 @@ export default function AppamSection() {
           i > 0 && (
             <div
               key={i}
-              className="pointer-events-none absolute left-0 hidden h-screen w-px snap-start lg:block"
+              className="pointer-events-none absolute left-0 h-screen w-px snap-start"
               style={{ top: `${i * 100}vh` }}
               aria-hidden="true"
             />
@@ -507,34 +554,22 @@ export default function AppamSection() {
         ref={stageRef}
         className="sticky top-0 flex h-screen w-full items-center justify-center overflow-hidden bg-white"
       >
-        {/* Mobile (Figma nodes 147:9699 + 147:9722 + 147:9728). Always the first project, fixed -
-            the frame only ever defines one, and the scroll-driven handover the desktop canvas below
-            uses needs room this frame doesn't have: parking the next set below the frame took less
-            travel than the viewport's actual height, so it was visible under the boards before any
-            scrolling happened. Simplest fix, and it matches the frame: mobile just shows it. */}
+        {/* Mobile (Figma nodes 147:9699 + 147:9722 + 147:9728). Uses the same scroll-driven
+            stage() as desktop. mobileDrift holds dynamically-computed --board-drift-from/to
+            values sized to the real viewport so boards park fully off-screen at both ends
+            (the mobile frame at 418px is shorter than the phone viewport, so static
+            MOBILE_HEIGHT-based bounds would leave boards partially visible). */}
         <div
           className="relative shrink-0 lg:hidden"
           style={{
+            ...mobileDrift,
             width: `${MOBILE_WIDTH}px`,
             height: `${MOBILE_HEIGHT}px`,
             transform: `scale(min(1, calc(100vw / ${MOBILE_WIDTH}px)))`,
             transformOrigin: "center center",
           }}
         >
-          {/* The boards go behind the copy at this size: the frame packs them in tight enough that
-              the upper one crosses the headline and the lower one the tail of the quote. */}
-          {BOARDS.map((board, slot) => (
-            <ProjectBoard
-              key={board.stand}
-              board={board}
-              photo={PROJECT_PHOTOS[0][slot]}
-              left={board.mobile.left}
-              top={board.mobile.top}
-              scale={board.mobile.scale}
-              entrance={entrance}
-            />
-          ))}
-          {mobileText(PROJECTS[0], "1")}
+          {stage(boardSet, (board) => board.mobile, mobileText)}
         </div>
 
         <div
@@ -550,23 +585,6 @@ export default function AppamSection() {
           <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "80px", top: "694.548px" }} />
 
           {stage(boardSet, (board) => board.desktop, desktopText)}
-
-          <SpeechBubbleCreature
-            left={1190}
-            top={600}
-            bubbleSrc="/timer-bubble.svg"
-            bubbleWidth={157}
-            bubbleHeight={109}
-            creatureLeft={142}
-            creatureTop={92}
-            textLeft={25}
-            textTop={31}
-            textWidth={107}
-          >
-            cool
-            <br />
-            right?
-          </SpeechBubbleCreature>
         </div>
       </div>
     </section>

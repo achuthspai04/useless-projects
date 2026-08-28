@@ -1,8 +1,7 @@
-// The "click here to reveal!" button from the Figma hero (node 143:6205) - a plain black
-// rectangle (no corner radius), centered under the title. The defaults are the desktop node's
-// root offset (386+110, 166+405) scaled by the site's 1.5x position factor (1920/1280 - see
-// hero-dots.tsx); size and font stay at Figma's raw px values. The mobile hero passes its own
-// geometry, since its canvas is a different size entirely.
+const REGISTER_URL = "https://tinkerhub.org/events/1M8ORET9A1/useless-projects-3.0";
+
+// The "Click to register" button - centered under the title in the hero.
+// Directs to the official TinkerHub registration page with interactive hover and click feedback.
 export default function RevealButton({
   top = 676.5,
   width = 296,
@@ -17,17 +16,19 @@ export default function RevealButton({
   lineHeight?: number;
 }) {
   return (
-    <button
-      type="button"
-      className="absolute left-1/2 flex -translate-x-1/2 cursor-pointer items-center justify-center bg-black hover:-translate-y-0.5 hover:bg-[#2a2a2a] hover:shadow-md active:translate-y-0"
+    <a
+      href={REGISTER_URL}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group absolute left-1/2 flex -translate-x-1/2 cursor-pointer items-center justify-center bg-black text-white shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#1a1a1a] hover:shadow-xl hover:shadow-black/25 active:translate-y-0.5 active:scale-[0.97] active:shadow-inner select-none"
       style={{ top: `${top}px`, width: `${width}px`, height: `${height}px` }}
     >
-      <p
-        className="font-nanum-pen text-center whitespace-nowrap text-white"
+      <span
+        className="font-nanum-pen text-center whitespace-nowrap text-white transition-transform duration-200 group-hover:scale-105"
         style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` }}
       >
-        Click here to reveal!
-      </p>
-    </button>
+        Click to register
+      </span>
+    </a>
   );
 }

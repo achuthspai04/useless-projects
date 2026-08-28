@@ -89,8 +89,12 @@ export default function CelebratingSection() {
       // next section showing underneath - `items-center` can only centre within the section, and
       // the section has to be screen-tall for that to mean screen-centred. The padding stays as a
       // floor for viewports too short for min-height to win; the 146px gutter is a desktop
-      // figure, and on a phone it was 292px of padding around a 188px composition.
-      className="relative flex min-h-screen w-full snap-start items-center justify-center bg-white py-[56px] lg:py-[146px] 2xl:py-[220px] min-[1920px]:py-[280px]"
+      // figure, and on a phone it was 292px of padding around a 188px composition. max-h-screen +
+      // overflow-hidden caps the other direction: on wide-but-not-tall desktop monitors the
+      // 2xl/1920 padding plus the scaled-up composition could add up to more than one viewport,
+      // pushing this section taller than 100vh and throwing off every snap point after it (the
+      // next section, why-section, would land scrolled partway into itself instead of at its top).
+      className="relative flex min-h-screen max-h-screen w-full snap-start snap-always items-center justify-center overflow-hidden bg-white py-[56px] lg:py-[146px] 2xl:py-[220px] min-[1920px]:py-[280px]"
     >
       <div
         className="relative shrink-0"

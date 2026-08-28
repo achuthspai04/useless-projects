@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
-import { armAudioUnlock, playScribbleSound } from "@/lib/scribble-sound";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -39,18 +38,12 @@ export default function WhySection() {
   const [arrowDrawn, setArrowDrawn] = useState(false);
 
   useEffect(() => {
-    armAudioUnlock();
     const node = sectionRef.current;
     if (!node) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting) return;
         setArrowDrawn(true);
-        // Only on desktop - the mobile frame has no arrow, so there'd be nothing being drawn for
-        // the scribble sound to belong to.
-        if (window.matchMedia("(min-width: 1024px)").matches) {
-          playScribbleSound(ARROW_DRAW_DURATION_S);
-        }
         observer.disconnect();
       },
       { threshold: 0.5 }
@@ -62,7 +55,8 @@ export default function WhySection() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex min-h-screen w-full snap-start items-center justify-center overflow-hidden bg-white"
+      id="why-section"
+      className="relative flex min-h-screen w-full snap-start snap-always items-center justify-center overflow-hidden bg-white"
     >
       {/* Mobile (Figma node 328:366). A dedicated layout rather than the desktop canvas scaled
           down, which at this width put the body copy at ~11px. */}
@@ -164,10 +158,9 @@ export default function WhySection() {
 
           <div className="relative" style={{ width: `${VIDEO_WIDTH_PX}px`, height: `${VIDEO_HEIGHT_PX}px` }}>
             {/* Hand-drawn arrow, scribbled in when the section scrolls into view (see the
-                IntersectionObserver above), paired with a synthesized scribble sound. A clip-path
-                wipe (rather than the stroke-dasharray trick used for the underline elsewhere) is
-                used here because this artwork is an inked/filled shape, not a single stroked
-                line. */}
+                IntersectionObserver above). A clip-path wipe (rather than the stroke-dasharray
+                trick used for the underline elsewhere) is used here because this artwork is an
+                inked/filled shape, not a single stroked line. */}
             <img
               src="/why-arrow.svg"
               alt=""

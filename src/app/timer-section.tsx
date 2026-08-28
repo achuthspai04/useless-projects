@@ -2,16 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { HoverDot } from "./hover-dot";
-import { SpeechBubbleCreature } from "./speech-bubble-creature";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
 
 // The Figma file has no mobile frame for this section, so it is rebuilt for the 402px artboard the
-// other mobile frames use rather than inferred: same three elements in the same arrangement (dot
-// top-right, countdown centred, creature low-right), sized for a phone. Scaling the 1280-wide
-// canvas down instead - what this section used to do - left the countdown at ~35px and the
-// creature's line at ~8px, and gave the section a fixed 832px height that overran shorter phones.
+// other mobile frames use rather than inferred: same elements in the same arrangement (dot
+// top-right, countdown centred), sized for a phone.
 const MOBILE_WIDTH = 402;
 const MOBILE_HEIGHT = 470;
 // "999 hour" measures 361px at 100px Drowner, so the widest the countdown can ever get still
@@ -19,9 +16,6 @@ const MOBILE_HEIGHT = 470;
 const MOBILE_COUNTDOWN_SIZE = 90;
 // The same 0.04em the desktop countdown uses (4.7265 / 118.163).
 const MOBILE_COUNTDOWN_TRACKING = MOBILE_COUNTDOWN_SIZE * 0.04;
-// Shrinks the whole creature group - bubble, doggo and line - as one piece, which keeps its
-// internal offsets intact without SpeechBubbleCreature needing a size of its own.
-const MOBILE_CREATURE_SCALE = 0.62;
 const MOBILE_DOT_SIZE = 34.52;
 
 const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
@@ -49,13 +43,13 @@ export default function TimerSection() {
   }, []);
 
   return (
-    <section className="relative flex min-h-screen w-full snap-start items-center justify-center overflow-hidden bg-white">
+    <section id="timer-section" className="relative flex h-screen w-full snap-start snap-always items-center justify-center overflow-hidden bg-white">
       <div
         className="relative shrink-0 lg:hidden"
         style={{
           width: `${MOBILE_WIDTH}px`,
           height: `${MOBILE_HEIGHT}px`,
-          transform: `scale(min(1, calc(100vw / ${MOBILE_WIDTH}px)))`,
+          transform: `scale(min(1, calc(100vw / ${MOBILE_WIDTH}px), calc(100vh / ${MOBILE_HEIGHT}px)))`,
           transformOrigin: "center center",
         }}
       >
@@ -63,13 +57,24 @@ export default function TimerSection() {
           <HoverDot assets={DOT_ASSETS} baseIndex={0} size={MOBILE_DOT_SIZE} />
         </div>
 
-        {/* Hours stacked over minutes rather than one long line - at this width a single line
-            would have to drop to roughly half the size to fit. */}
+        {/* Subheading in cursive font (font-nanum-pen) - Centered */}
         <p
-          className="font-drowner absolute text-center text-black"
+          className="font-nanum-pen absolute left-1/2 -translate-x-1/2 text-center text-[#100f0f]"
           style={{
-            left: 0,
-            top: "128px",
+            top: "70px",
+            width: `${MOBILE_WIDTH}px`,
+            fontSize: "28px",
+            lineHeight: "32px",
+          }}
+        >
+          making starts in
+        </p>
+
+        {/* Hours stacked over minutes - Centered */}
+        <p
+          className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
+          style={{
+            top: "115px",
             width: `${MOBILE_WIDTH}px`,
             fontSize: `${MOBILE_COUNTDOWN_SIZE}px`,
             lineHeight: 1.05,
@@ -86,31 +91,6 @@ export default function TimerSection() {
             " "
           )}
         </p>
-
-        <div
-          className="absolute"
-          style={{
-            left: "258px",
-            top: "330px",
-            transform: `scale(${MOBILE_CREATURE_SCALE})`,
-            transformOrigin: "top left",
-          }}
-        >
-          <SpeechBubbleCreature
-            left={0}
-            top={0}
-            bubbleSrc="/timer-bubble.svg"
-            bubbleWidth={157}
-            bubbleHeight={109}
-            creatureLeft={142}
-            creatureTop={92}
-            textLeft={25}
-            textTop={31}
-            textWidth={107}
-          >
-            get ready to build
-          </SpeechBubbleCreature>
-        </div>
       </div>
 
       <div
@@ -126,12 +106,24 @@ export default function TimerSection() {
           <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} />
         </div>
 
+        {/* Desktop subheading in cursive font (font-nanum-pen) - Centered */}
         <p
-          className="font-drowner absolute text-black"
+          className="font-nanum-pen absolute left-1/2 -translate-x-1/2 text-center text-[#100f0f]"
           style={{
-            left: "231px",
+            top: "245px",
+            fontSize: "38px",
+            lineHeight: "42px",
+          }}
+        >
+          making starts in
+        </p>
+
+        {/* Desktop timer digits - Centered */}
+        <p
+          className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
+          style={{
             top: "310px",
-            width: "817.327px",
+            width: `${REF_WIDTH}px`,
             height: "130px",
             fontSize: "118.163px",
             lineHeight: "normal",
@@ -140,21 +132,6 @@ export default function TimerSection() {
         >
           {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
-
-        <SpeechBubbleCreature
-          left={1049}
-          top={622}
-          bubbleSrc="/timer-bubble.svg"
-          bubbleWidth={157}
-          bubbleHeight={109}
-          creatureLeft={142}
-          creatureTop={92}
-          textLeft={25}
-          textTop={31}
-          textWidth={107}
-        >
-          get ready to build
-        </SpeechBubbleCreature>
       </div>
     </section>
   );

@@ -473,7 +473,7 @@ export default function TetrisField({
             secondaryFrames={ELE5_SECONDARY_FRAMES}
             secondaryScale={1.23}
             anchor="left"
-            style={{ ...perch(0.8), height: cell * 1.35 }}
+            style={{ ...perch(0.8), height: cell * 0.85 }}
           />
           {/* Frames have different intrinsic widths at a fixed height (a fire breath), so this one
               grows rightward from a fixed left edge rather than staying centred. */}
@@ -482,7 +482,7 @@ export default function TetrisField({
             anchor="left"
             frameIntervalMs={350}
             repeatCount={2}
-            style={{ ...perch(0.18), height: cell * 1.45 }}
+            style={{ ...perch(0.18), height: cell * 0.9 }}
           />
         </>
       )}
