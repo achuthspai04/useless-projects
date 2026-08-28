@@ -1,11 +1,32 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useState } from "react";
 import { HoverDot } from "./hover-dot";
 import { SpeechBubbleCreature } from "./speech-bubble-creature";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
+
+// The mobile frame (Figma node 147:9834, 367 wide on the 402px artboard) is this same composition
+// uniformly reduced - the card width, the 100px heading, the 8.43px radius, the 20px chevron and
+// every gap in between are all the desktop figure times 367/640. So the block is authored once at
+// its desktop size and every dimension reads off --faq-scale, rather than the two breakpoints
+// carrying two sets of hand-converted numbers.
+const BLOCK_WIDTH = 640;
+const MOBILE_BLOCK_WIDTH = 367;
+const MOBILE_SCALE = MOBILE_BLOCK_WIDTH / BLOCK_WIDTH;
+// On phones narrower than the artboard the block keeps shrinking past the frame's own size so a
+// 16px gutter survives either side - the same floor the other mobile frames use.
+const MOBILE_SCALE_STYLE = {
+  "--faq-scale": `min(${MOBILE_SCALE}, calc((100vw - 32px) / ${BLOCK_WIDTH}px))`,
+} as CSSProperties;
+const DESKTOP_SCALE_STYLE = { "--faq-scale": "1" } as CSSProperties;
+// The one thing the mobile frame does differently rather than just smaller: the heading's text
+// box is centred over the cards instead of running flush with their left edge.
+const MOBILE_HEADER_WIDTH = 562;
+
+const px = (value: number) => `calc(${value}px * var(--faq-scale))`;
 
 // Same palette used for the other dot decorations across the site (see hero-dots.tsx /
 // why-section.tsx) - this dot's own base color is the same red/magenta combo as why-dot.svg.
@@ -35,41 +56,95 @@ function FaqItem({
   onToggle: () => void;
 }) {
   return (
-    <div className="w-full rounded-[8.43px] bg-white" style={{ width: "640px" }}>
+    <div className="w-full bg-white" style={{ borderRadius: px(8.43) }}>
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         className="flex w-full cursor-pointer items-center justify-between"
-        style={{ paddingLeft: "32.58px", paddingRight: "16px", paddingTop: "16px", paddingBottom: "16px" }}
+        style={{
+          paddingLeft: px(32.58),
+          paddingRight: px(16),
+          paddingTop: px(16),
+          paddingBottom: px(16),
+        }}
       >
-        <span className="flex items-center gap-2">
-          <span className="font-helvetica text-[21.72px] text-black" style={{ lineHeight: "26.064px" }}>
+        <span className="flex items-center" style={{ gap: px(8) }}>
+          <span className="font-helvetica text-black" style={{ fontSize: px(21.72), lineHeight: px(26.064) }}>
             {tag}
           </span>
-          <span className="font-nanum-pen text-[21.72px] text-black" style={{ lineHeight: "26.064px" }}>
+          <span className="font-nanum-pen text-black" style={{ fontSize: px(21.72), lineHeight: px(26.064) }}>
             {question}
           </span>
         </span>
         <span
-          className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#ea34df]"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
+          className="flex shrink-0 items-center justify-center rounded-full bg-[#ea34df]"
+          style={{
+            width: px(20),
+            height: px(20),
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+          }}
         >
-          <img src="/faq-dropdown-arrow.svg" alt="" style={{ width: "7.5px", height: "3.75px" }} />
+          <img src="/faq-dropdown-arrow.svg" alt="" style={{ width: px(7.5), height: px(3.75) }} />
         </span>
       </button>
 
-      <div
-        style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr" }}
-      >
+      <div style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr" }}>
         <div className="overflow-hidden">
           <p
             className="font-nanum-pen text-black"
-            style={{ fontSize: "20px", lineHeight: "30px", paddingLeft: "32.58px", paddingRight: "16px", paddingBottom: "16px" }}
+            style={{
+              fontSize: px(20),
+              lineHeight: px(30),
+              paddingLeft: px(32.58),
+              paddingRight: px(16),
+              paddingBottom: px(16),
+            }}
           >
             {answer}
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function FaqBlock({
+  headerWidth = BLOCK_WIDTH,
+  openItems,
+  onToggle,
+}: {
+  headerWidth?: number;
+  openItems: boolean[];
+  onToggle: (index: number) => void;
+}) {
+  return (
+    <div className="flex flex-col items-center" style={{ width: px(BLOCK_WIDTH), gap: px(11) }}>
+      {/* items-center on the column is what centres the heading when it is given the narrower
+          mobile box; at the full block width it lands flush left, as the desktop frame has it. */}
+      <p
+        className="font-drowner text-[#0e0e0d]"
+        style={{
+          width: px(headerWidth),
+          fontSize: px(100),
+          lineHeight: "normal",
+          letterSpacing: px(2),
+        }}
+      >
+        want to know more?
+      </p>
+
+      <div className="flex w-full flex-col" style={{ gap: px(12) }}>
+        {FAQ_ITEMS.map((item, index) => (
+          <FaqItem
+            key={index}
+            tag={item.tag}
+            question={item.question}
+            answer={item.answer}
+            open={openItems[index]}
+            onToggle={() => onToggle(index)}
+          />
+        ))}
       </div>
     </div>
   );
@@ -84,8 +159,14 @@ export default function FaqSection() {
 
   return (
     <section className="relative flex min-h-screen w-full snap-start items-center justify-center overflow-hidden bg-white">
+      {/* Mobile (Figma node 147:9834). The frame carries only the heading and the two cards - no
+          corner dot, and no "more details?" creature. */}
+      <div className="flex w-full justify-center lg:hidden" style={MOBILE_SCALE_STYLE}>
+        <FaqBlock headerWidth={MOBILE_HEADER_WIDTH} openItems={openItems} onToggle={toggleItem} />
+      </div>
+
       <div
-        className="relative shrink-0"
+        className="relative hidden shrink-0 lg:block"
         style={{
           width: `${REF_WIDTH}px`,
           height: `${REF_HEIGHT}px`,
@@ -95,26 +176,8 @@ export default function FaqSection() {
       >
         <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
 
-        <div className="absolute flex flex-col items-center" style={{ left: "283px", top: "123px", width: "640px", gap: "11px" }}>
-          <p
-            className="font-drowner w-full text-[#0e0e0d]"
-            style={{ fontSize: "100px", lineHeight: "normal", letterSpacing: "2px" }}
-          >
-            want to know more?
-          </p>
-
-          <div className="flex w-full flex-col" style={{ gap: "12px" }}>
-            {FAQ_ITEMS.map((item, index) => (
-              <FaqItem
-                key={index}
-                tag={item.tag}
-                question={item.question}
-                answer={item.answer}
-                open={openItems[index]}
-                onToggle={() => toggleItem(index)}
-              />
-            ))}
-          </div>
+        <div className="absolute" style={{ left: "283px", top: "123px", ...DESKTOP_SCALE_STYLE }}>
+          <FaqBlock openItems={openItems} onToggle={toggleItem} />
         </div>
 
         <SpeechBubbleCreature

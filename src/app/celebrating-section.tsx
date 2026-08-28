@@ -11,7 +11,10 @@ import { armAudioUnlock, playScribbleSound } from "@/lib/scribble-sound";
 // piece instead of the layout being re-derived. Floor/ceiling keep it from ever becoming
 // illegibly small or comically oversized.
 const SCALE_REFERENCE_WIDTH_PX = 1440;
-const MIN_SCALE = 0.45;
+// The floor is what phones get, since 100vw/1440 is well below it there. At 0.45 the composition
+// came out 226px wide on a 390px screen - over 40% of the width left blank either side - so it
+// sits higher now. 0.62 still fits a 320px screen without overflowing (0.62 * 502 = 311px).
+const MIN_SCALE = 0.62;
 const MAX_SCALE = 1.6;
 const CELEBRATE_SCALE_STYLE = {
   "--celebrate-scale": `clamp(${MIN_SCALE}, calc(100vw / ${SCALE_REFERENCE_WIDTH_PX}px), ${MAX_SCALE})`,
@@ -81,7 +84,13 @@ export default function CelebratingSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative flex w-full snap-start items-center justify-center bg-white py-[146px] 2xl:py-[220px] min-[1920px]:py-[280px]"
+      // min-h-screen matches every other section on the page. Without it this one was shorter
+      // than the viewport, so snap-scrolling to it left the composition high on screen with the
+      // next section showing underneath - `items-center` can only centre within the section, and
+      // the section has to be screen-tall for that to mean screen-centred. The padding stays as a
+      // floor for viewports too short for min-height to win; the 146px gutter is a desktop
+      // figure, and on a phone it was 292px of padding around a 188px composition.
+      className="relative flex min-h-screen w-full snap-start items-center justify-center bg-white py-[56px] lg:py-[146px] 2xl:py-[220px] min-[1920px]:py-[280px]"
     >
       <div
         className="relative shrink-0"

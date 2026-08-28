@@ -87,8 +87,8 @@ export default function MobileHero() {
         {/* Same arrangement as the desktop hero - the tagline centred on one line directly above
             the reveal button - but sized for this 402px-wide canvas, and sat high enough that
             neither is buried under the standing blocks on arrival. */}
-        <HeroTagline top={524} width={402} fontSize={14.786} lineHeight={12} />
-        <RevealButton top={556} width={252} height={62} fontSize={29} lineHeight={24} />
+        <HeroTagline top={480} width={402} fontSize={14.786} lineHeight={12} />
+        <RevealButton top={512} width={252} height={62} fontSize={29} lineHeight={24} />
       </div>
     </div>
   );
