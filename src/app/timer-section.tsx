@@ -40,7 +40,7 @@ const MOBILE_TARGET_CELL = 22;
 // The reveal runs itself: the board fills, the dates land on it once those blocks have settled
 // (animate-lego-pop is 200ms), they hold for a beat, and then the section comes back.
 const CARDS_IN_MS = 320;
-const CARDS_HOLD_MS = 1000;
+const CARDS_HOLD_MS = 3000;
 
 export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
@@ -75,7 +75,7 @@ export default function TimerSection() {
       }`}
       style={{ top: `${top}px`, width: "180px", height: "48px", fontSize: "24px" }}
     >
-      curiosity?
+      know when?
     </button>
   );
 

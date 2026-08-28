@@ -155,7 +155,7 @@ function DateCards({
   );
 }
 
-// The "curiosity?" reveal: fills the whole section with the tetris board's finished state - the
+// The "know when?" reveal: fills the whole section with the tetris board's finished state - the
 // exact same TetrisField the hero runs, rendered in its flooded end state (see the `flooded` prop)
 // rather than reimplemented here - and then scatters the event dates across it. The caller drives
 // the sequencing (board, then cards, then back to the section); this just renders a given step.
