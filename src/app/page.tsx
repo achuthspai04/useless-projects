@@ -3,6 +3,7 @@ import AppamSection from "./appam-section";
 import CelebratingSection from "./celebrating-section";
 import FaqSection from "./faq-section";
 import HeroDots from "./hero-dots";
+import MobileHero from "./mobile-hero";
 import SeeAllSection from "./see-all-section";
 import TimerSection from "./timer-section";
 import Title from "./title";
@@ -18,7 +19,8 @@ const REF_HEIGHT = 1080;
 export default function Home() {
   return (
     <>
-      <div className="relative flex min-h-screen shrink-0 snap-start items-center justify-center overflow-hidden">
+      <MobileHero />
+      <div className="relative hidden min-h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:flex">
         <div
           className="absolute"
           style={{

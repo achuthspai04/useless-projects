@@ -47,7 +47,7 @@ export default function TimerSection() {
         </div>
 
         <p
-          className="font-drowner absolute text-black"
+          className="font-drowner absolute hidden text-black lg:block"
           style={{
             left: "231px",
             top: "310px",
@@ -59,6 +59,30 @@ export default function TimerSection() {
           }}
         >
           {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
+        </p>
+
+        {/* Narrow screens get hours stacked over minutes instead of one long line, so it still
+            reads at a glance once the whole canvas is scaled way down. */}
+        <p
+          className="font-drowner absolute text-center text-black lg:hidden"
+          style={{
+            left: "231px",
+            top: "260px",
+            width: "817.327px",
+            fontSize: "118.163px",
+            lineHeight: 1.05,
+            letterSpacing: "4.7265px",
+          }}
+        >
+          {remaining ? (
+            <>
+              {remaining.hours} hour
+              <br />
+              {remaining.minutes} min
+            </>
+          ) : (
+            " "
+          )}
         </p>
 
         <SpeechBubbleCreature
