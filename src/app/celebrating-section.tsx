@@ -181,7 +181,7 @@ export default function CelebratingSection() {
           <img
             src="/creature-green.svg"
             alt=""
-            className="absolute h-[95.964px] w-[59px]"
+            className="absolute h-[95.964px] w-[59px] animate-float-slow"
             style={{ left: "367px", top: "226px" }}
           />
         </div>
