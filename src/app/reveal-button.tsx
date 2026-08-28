@@ -1,6 +1,6 @@
 const REGISTER_URL = "https://tinkerhub.org/events/1M8ORET9A1/useless-projects-3.0";
 
-// The "Click to register" button - centered under the title in the hero.
+// The "register here" button - centered under the title in the hero.
 // Directs to the official TinkerHub registration page with interactive hover and click feedback.
 export default function RevealButton({
   top = 676.5,
@@ -27,7 +27,7 @@ export default function RevealButton({
         className="font-nanum-pen text-center whitespace-nowrap text-white transition-transform duration-200 group-hover:scale-105"
         style={{ fontSize: `${fontSize}px`, lineHeight: `${lineHeight}px` }}
       >
-        Click to register
+        register here
       </span>
     </a>
   );
