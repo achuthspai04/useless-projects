@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { HoverDot } from "./hover-dot";
 import { armAudioUnlock, playScribbleSound } from "@/lib/scribble-sound";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
+
+// Its own color plus the hero's 4 corner-dot colors, so hovering picks a random different one
+// from this same palette instead of needing dedicated assets just for this dot.
+const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
 // Single gap value shared by both the heading->paragraph and paragraph->image gaps, so the
 // vertical rhythm reads as even instead of the two gaps having independently-tuned sizes.
@@ -45,7 +50,7 @@ export default function WhySection() {
       className="relative flex min-h-screen w-full snap-start items-center justify-center overflow-hidden bg-white"
     >
       <div
-        className="relative"
+        className="relative shrink-0"
         style={{
           width: `${REF_WIDTH}px`,
           height: `${REF_HEIGHT}px`,
@@ -53,10 +58,11 @@ export default function WhySection() {
           transformOrigin: "center center",
         }}
       >
-        <img
-          src="/why-dot.svg"
-          alt=""
-          className="absolute size-[63.73px]"
+        <HoverDot
+          assets={DOT_ASSETS}
+          baseIndex={0}
+          size={63.73}
+          className="absolute"
           style={{ left: "1120px", top: "89px" }}
         />
 

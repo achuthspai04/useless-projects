@@ -12,7 +12,7 @@ export default function Title() {
       }}
     >
       <h1
-        className="font-drowner text-center text-black"
+        className="font-drowner text-center text-[#0e0e0d]"
         style={{
           fontSize: "160px",
           fontWeight: 342,

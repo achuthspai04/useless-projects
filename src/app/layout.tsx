@@ -29,6 +29,14 @@ const nanumPen = localFont({
   variable: "--font-nanum-pen",
 });
 
+const helvetica = localFont({
+  src: [
+    { path: "../fonts/Helvetica.ttf", weight: "400", style: "normal" },
+    { path: "../fonts/Helvetica-Bold.ttf", weight: "700", style: "normal" },
+  ],
+  variable: "--font-helvetica",
+});
+
 export const metadata: Metadata = {
   title: "useless-projects",
   description: "",
@@ -38,7 +46,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} ${nanumPen.variable} h-full snap-y snap-mandatory scroll-smooth antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} ${nanumPen.variable} ${helvetica.variable} h-full snap-y snap-mandatory scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Splash>{children}</Splash>

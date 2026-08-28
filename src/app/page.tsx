@@ -1,6 +1,9 @@
 import AnimatedElephant from "./animated-elephant";
+import AppamSection from "./appam-section";
 import CelebratingSection from "./celebrating-section";
+import FaqSection from "./faq-section";
 import HeroDots from "./hero-dots";
+import SeeAllSection from "./see-all-section";
 import Title from "./title";
 import TetrisSkyline from "./tetris-skyline";
 import WhySection from "./why-section";
@@ -55,6 +58,9 @@ export default function Home() {
       </div>
       <CelebratingSection />
       <WhySection />
+      <AppamSection />
+      <SeeAllSection />
+      <FaqSection />
     </>
   );
 }

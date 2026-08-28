@@ -1,10 +1,7 @@
-"use client";
-
-import { useState } from "react";
+import { HoverDot } from "./hover-dot";
 
 // 25% bigger than the previous resting size (47.8px -> 59.75px).
 const DOT_SIZE_PX = 59.75;
-const HOVER_SCALE = 1.8;
 // Figma has each pair essentially touching (a ~0.3px gap at full scale), so a small explicit gap
 // keeps that same tight, adjacent look at this size instead of drifting apart.
 const PAIR_GAP_PX = 5;
@@ -34,40 +31,18 @@ const DOTS = [
   { baseIndex: 2, left: `${RIGHT_PAIR_RIGHT_PX - DOT_SIZE_PX}px`, top: `${RIGHT_PAIR_TOP_PX}px` },
 ] as const;
 
-function pickDifferentIndex(excludeIndex: number) {
-  const others = DOT_ASSETS.map((_, i) => i).filter((i) => i !== excludeIndex);
-  return others[Math.floor(Math.random() * others.length)];
-}
-
-function HeroDot({ baseIndex, left, top }: { baseIndex: number; left: string; top: string }) {
-  // null = at rest, showing its own base color. Set (to a different index) on hover, so
-  // "become a random big of a different color" is re-rolled fresh on every hover-in.
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const isHovered = hoverIndex !== null;
-
-  return (
-    <img
-      src={DOT_ASSETS[isHovered ? hoverIndex : baseIndex]}
-      alt=""
-      className="absolute cursor-pointer transition-transform duration-300 ease-out"
-      style={{
-        left,
-        top,
-        width: DOT_SIZE_PX,
-        height: DOT_SIZE_PX,
-        transform: isHovered ? `scale(${HOVER_SCALE})` : "scale(1)",
-      }}
-      onMouseEnter={() => setHoverIndex(pickDifferentIndex(baseIndex))}
-      onMouseLeave={() => setHoverIndex(null)}
-    />
-  );
-}
-
 export default function HeroDots() {
   return (
     <>
       {DOTS.map((dot) => (
-        <HeroDot key={dot.baseIndex} baseIndex={dot.baseIndex} left={dot.left} top={dot.top} />
+        <HoverDot
+          key={dot.baseIndex}
+          assets={DOT_ASSETS}
+          baseIndex={dot.baseIndex}
+          size={DOT_SIZE_PX}
+          className="absolute"
+          style={{ left: dot.left, top: dot.top }}
+        />
       ))}
     </>
   );

@@ -13,6 +13,7 @@
   --font-drowner: var(--font-drowner);
   --font-jrk: var(--font-jrk);
   --font-nanum-pen: var(--font-nanum-pen);
+  --font-helvetica: var(--font-helvetica);
 }
 
 body {
