@@ -426,9 +426,10 @@ export default function FaqSection() {
         >
           <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
 
-          {/* Padding rather than the frame's absolute offsets, so the block is in flow and its
-              height carries up to the section instead of being pinned inside a fixed 832px box. */}
-          <div style={{ paddingLeft: "283px", paddingTop: "123px", ...DESKTOP_SCALE_STYLE }}>
+          {/* In flow (not the frame's absolute offsets) so the block's height carries up to the
+              section instead of being pinned inside a fixed 832px box, and centred rather than at
+              the frame's left:283 - that sat the block 37px left of the section's own centre. */}
+          <div className="flex justify-center" style={{ paddingTop: "123px", ...DESKTOP_SCALE_STYLE }}>
             <FaqBlock
               openItems={openItems}
               onToggle={toggleItem}
