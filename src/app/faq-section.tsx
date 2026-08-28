@@ -1,11 +1,10 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
 
 const REF_WIDTH = 1280;
-const REF_HEIGHT = 832;
 
 // The mobile frame (Figma node 147:9834, 367 wide on the 402px artboard) is this same composition
 // uniformly reduced - the card width, the 100px heading, the 8.43px radius, the 20px chevron and
@@ -29,6 +28,10 @@ const DESKTOP_SCALE_STYLE = {
 // The one thing the mobile frame does differently rather than just smaller: the heading's text
 // box is centred over the cards instead of running flush with their left edge.
 const MOBILE_HEADER_WIDTH = 562;
+
+// How many questions are up before "show more". Six is what fits a laptop viewport alongside the
+// heading, so the section opens at roughly one screen and only grows once asked to.
+const COLLAPSED_COUNT = 6;
 
 const px = (value: number) => `calc(${value}px * var(--faq-scale))`;
 const pxText = (value: number) => `calc(${value}px * var(--faq-text-scale, 1))`;
@@ -272,11 +275,16 @@ function FaqBlock({
   headerWidth = BLOCK_WIDTH,
   openItems,
   onToggle,
+  expanded,
+  onExpand,
 }: {
   headerWidth?: number;
   openItems: boolean[];
   onToggle: (index: number) => void;
+  expanded: boolean;
+  onExpand: () => void;
 }) {
+  const shown = expanded ? FAQ_ITEMS : FAQ_ITEMS.slice(0, COLLAPSED_COUNT);
   return (
     <div className="flex flex-col items-center" style={{ width: px(BLOCK_WIDTH), gap: px(12) }}>
       {/* items-center on the column is what centres the heading when it is given the narrower
@@ -294,7 +302,7 @@ function FaqBlock({
       </p>
 
       <div className="flex w-full flex-col" style={{ gap: px(14) }}>
-        {FAQ_ITEMS.map((item, index) => (
+        {shown.map((item, index) => (
           <FaqItem
             key={index}
             tag={item.tag}
@@ -305,51 +313,128 @@ function FaqBlock({
           />
         ))}
       </div>
+
+      {!expanded && (
+        <button
+          type="button"
+          onClick={onExpand}
+          className="font-nanum-pen cursor-pointer text-[#0e0e0d] underline decoration-wavy underline-offset-4 transition-opacity duration-200 hover:opacity-60"
+          style={{ fontSize: pxText(30), marginTop: px(6) }}
+        >
+          show more ({FAQ_ITEMS.length - COLLAPSED_COUNT} more)
+        </button>
+      )}
     </div>
   );
 }
 
 export default function FaqSection() {
   const [openItems, setOpenItems] = useState<boolean[]>(() => FAQ_ITEMS.map((_, i) => i === 0));
+  const [expanded, setExpanded] = useState(false);
+  const sectionRef = useRef<HTMLElement>(null);
+  // Number of viewports this section currently spans. Expanding the questions can push it past
+  // one, and under the page's mandatory y-snapping the only restable positions are snap points -
+  // so anything between this section's start and the next one's would be unreachable. Extra snap
+  // points every viewport keep the whole of it scrollable, the same trick appam-section uses for
+  // its multi-screen stage.
+  const [panels, setPanels] = useState(1);
+  // The desktop canvas is laid out at a fixed 1280 and scaled down to fit, but a transform doesn't
+  // shrink the layout box - so the canvas keeps reserving its full unscaled height and the section
+  // ends up hundreds of pixels taller than what's actually drawn. Measuring it lets the wrapper
+  // below claim the scaled height instead, which is what "the content sets the height" needs.
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasHeight, setCanvasHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const measure = () => setCanvasHeight(el.offsetHeight || null);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [expanded, openItems]);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const measure = () =>
+      setPanels(Math.max(1, Math.ceil(el.getBoundingClientRect().height / window.innerHeight)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener("resize", measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   const toggleItem = (index: number) => {
     setOpenItems((prev) => prev.map((value, i) => (i === index ? !value : value)));
   };
 
   return (
-    // h-screen (not min-h-screen) plus an inner scroller, because the answers run well past one
-    // viewport - 1350px tall on a 390x844 phone. As a taller-than-viewport snap panel under the
-    // page's mandatory y-snapping, its bottom half was simply unreachable: the scroll jumped from
-    // its snap point straight to the timer section. overflow-hidden also matches every other
-    // full-page section here, and keeps the desktop canvas below from widening the page.
+    // The content sets the height: min-h-screen is only a floor, and there's no inner scroller -
+    // the section just grows as questions are opened or "show more" is used. overflow-hidden keeps
+    // the desktop canvas below (laid out at a fixed 1280 and scaled down) from widening the page,
+    // which every other full-page section here already does.
     <section
+      ref={sectionRef}
       id="faq-section"
-      className="relative h-screen w-full snap-start snap-always overflow-hidden bg-white"
+      className="relative flex min-h-screen w-full snap-start snap-always items-center justify-center overflow-hidden bg-white py-16"
     >
-      <div className="h-full w-full overflow-y-auto">
-        {/* min-h-full so the content still centres when it does fit, and grows (scrolling inside
-            the parent) when it doesn't. */}
-        <div className="flex min-h-full w-full items-center justify-center py-16">
-          {/* Mobile (Figma node 147:9834). The frame carries only the heading and the cards - no
-              corner dot, and no "more details?" creature. */}
-          <div className="flex w-full justify-center lg:hidden" style={MOBILE_SCALE_STYLE}>
-            <FaqBlock headerWidth={MOBILE_HEADER_WIDTH} openItems={openItems} onToggle={toggleItem} />
-          </div>
+      {Array.from({ length: panels - 1 }, (_, i) => (
+        <div
+          key={i}
+          className="pointer-events-none absolute left-0 h-px w-px snap-start"
+          style={{ top: `${(i + 1) * 100}vh` }}
+          aria-hidden="true"
+        />
+      ))}
 
-          <div
-            className="relative hidden shrink-0 lg:block"
-            style={{
-              width: `${REF_WIDTH}px`,
-              minHeight: `${REF_HEIGHT}px`,
-              transform: `scale(min(1, calc(100vw / ${REF_WIDTH}px)))`,
-              transformOrigin: "top center",
-            }}
-          >
-            <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
+      {/* Mobile (Figma node 147:9834). The frame carries only the heading and the cards - no
+          corner dot, and no "more details?" creature. */}
+      <div className="flex w-full justify-center lg:hidden" style={MOBILE_SCALE_STYLE}>
+        <FaqBlock
+          headerWidth={MOBILE_HEADER_WIDTH}
+          openItems={openItems}
+          onToggle={toggleItem}
+          expanded={expanded}
+          onExpand={() => setExpanded(true)}
+        />
+      </div>
 
-            <div className="absolute" style={{ left: "283px", top: "123px", ...DESKTOP_SCALE_STYLE }}>
-              <FaqBlock openItems={openItems} onToggle={toggleItem} />
-            </div>
+      {/* Claims the canvas's scaled height so the section doesn't reserve the untransformed box. */}
+      <div
+        className="hidden shrink-0 lg:block"
+        style={{
+          width: `${REF_WIDTH}px`,
+          height: canvasHeight
+            ? `calc(${canvasHeight}px * min(1, calc(100vw / ${REF_WIDTH}px)))`
+            : undefined,
+        }}
+      >
+        <div
+          ref={canvasRef}
+          className="relative"
+          style={{
+            width: `${REF_WIDTH}px`,
+            transform: `scale(min(1, calc(100vw / ${REF_WIDTH}px)))`,
+            transformOrigin: "top center",
+          }}
+        >
+          <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
+
+          {/* Padding rather than the frame's absolute offsets, so the block is in flow and its
+              height carries up to the section instead of being pinned inside a fixed 832px box. */}
+          <div style={{ paddingLeft: "283px", paddingTop: "123px", ...DESKTOP_SCALE_STYLE }}>
+            <FaqBlock
+              openItems={openItems}
+              onToggle={toggleItem}
+              expanded={expanded}
+              onExpand={() => setExpanded(true)}
+            />
           </div>
         </div>
       </div>
