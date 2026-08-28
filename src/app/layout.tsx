@@ -38,7 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} ${nanumPen.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${drowner.variable} ${jrk.variable} ${nanumPen.variable} h-full snap-y snap-mandatory scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Splash>{children}</Splash>
