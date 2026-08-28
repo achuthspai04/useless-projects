@@ -34,9 +34,13 @@ const FLOOD_ROW_STAGGER_MS = 55;
 const FLOOD_HOLD_MS = 1100;
 const RESET_PAUSE_MS = 500;
 // How long a perched creature stays gone after getting bonked before it pops back up somewhere
-// else - long enough for the fade-out transition (see CREATURE_TRANSITION_MS) to finish first.
+// else.
 const CREATURE_RESPAWN_MS = 700;
-const CREATURE_TRANSITION_MS = 300;
+const PARTICLE_LIFETIME_MS = 550;
+// Blocky debris colors, sampled per event rather than per creature - a handful of hot colors for
+// the "destroyed" burst, cooler/brighter ones for the "spawned" sparkle, Minecraft-particle style.
+const DEATH_PARTICLE_COLORS = ["#e82803", "#100f0f", "#ea34df", "#ffd400"];
+const SPAWN_PARTICLE_COLORS = ["#ffffff", "#7dd3fc", "#fde68a", "#a7f3d0"];
 
 interface Placed {
   col: number;
@@ -58,6 +62,19 @@ interface CreatureState {
   /** Row units, matching `surface` - the block-height the creature is currently perched at. */
   row: number;
   alive: boolean;
+}
+/** One square of debris from a creature's destroy/spawn burst - see `burst` below. */
+interface Particle {
+  id: number;
+  left: number;
+  bottom: number;
+  size: number;
+  color: string;
+  /** End-of-animation offset in px, consumed as CSS custom properties (see the pixel-burst
+   *  keyframe) rather than baked into a per-particle transition, since each one scatters to a
+   *  different spot. */
+  dx: number;
+  dy: number;
 }
 
 // Per-shape geometry in whole rows/columns, worked out once rather than on every spawn.
@@ -258,6 +275,8 @@ export default function TetrisField({
   const [ele5, setEle5] = useState<CreatureState | null>(null);
   const ele3Ref = useRef<CreatureState | null>(null);
   const ele5Ref = useRef<CreatureState | null>(null);
+  const [particles, setParticles] = useState<Particle[]>([]);
+  const particleIdRef = useRef(0);
 
   useEffect(() => {
     const el = ref.current;
@@ -329,10 +348,36 @@ export default function TetrisField({
     };
     resetCreatures();
 
+    // A burst of little squares scattering out from a grid spot and fading - a block breaking
+    // apart, Minecraft-particle style. Used for both the "destroyed" and "spawned" moments below,
+    // just with different palettes.
+    const burst = (col: number, row: number, colors: string[], count: number) => {
+      const baseLeft = col * cell;
+      const baseBottom = row * cell;
+      const size = Math.max(4, cell * 0.14);
+      const spawned: Particle[] = Array.from({ length: count }, () => {
+        const angle = Math.random() * Math.PI * 2;
+        const dist = cell * (0.4 + Math.random() * 0.6);
+        return {
+          id: particleIdRef.current++,
+          left: baseLeft + (Math.random() - 0.5) * cell * 0.6,
+          bottom: baseBottom + Math.random() * cell * 0.4,
+          size,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          dx: Math.cos(angle) * dist,
+          dy: Math.abs(Math.sin(angle)) * dist * 0.5 + dist * 0.3,
+        };
+      });
+      setParticles((prev) => [...prev, ...spawned]);
+      const ids = new Set(spawned.map((p) => p.id));
+      after(PARTICLE_LIFETIME_MS, () => setParticles((prev) => prev.filter((p) => !ids.has(p.id))));
+    };
+
     // A block landing in a creature's column always lands right at the creature's feet (the
     // creature isn't part of the landing grid, so it never blocks anything) - which reads exactly
-    // like the block bonking it on the head. Kill it (fades out, see the JSX), then a beat later
-    // pop it back up wherever the stack happens to be tallest right now.
+    // like the block bonking it on the head. It's destroyed on the spot (see the JSX - it just
+    // stops rendering, no fade), then a beat later pops back into existence wherever the stack
+    // happens to be tallest right now.
     const maybeKillCreature = (
       creatureRef: typeof ele3Ref,
       setCreature: typeof setEle3,
@@ -342,6 +387,7 @@ export default function TetrisField({
       const c = creatureRef.current;
       if (!c || !c.alive) return;
       if (c.col < blockCol || c.col >= blockCol + blockCols) return;
+      burst(c.col, c.row, DEATH_PARTICLE_COLORS, 12);
       const dead = { ...c, alive: false };
       creatureRef.current = dead;
       setCreature(dead);
@@ -356,6 +402,7 @@ export default function TetrisField({
             bestCol = col;
           }
         }
+        burst(bestCol, bestRow, SPAWN_PARTICLE_COLORS, 9);
         const respawned: CreatureState = { col: bestCol, row: bestRow, alive: true };
         creatureRef.current = respawned;
         setCreature(respawned);
@@ -366,6 +413,7 @@ export default function TetrisField({
       setFlood(null);
       setStack([]);
       setActive(null);
+      setParticles([]);
       landedRef.current = [];
       surfaceRef.current = [...(skylineRef.current?.surface ?? [])];
       resetCreatures();
@@ -474,6 +522,7 @@ export default function TetrisField({
       ele5Ref.current = null;
       setEle3(null);
       setEle5(null);
+      setParticles([]);
     };
   }, [columns, skyline]);
 
@@ -542,43 +591,58 @@ export default function TetrisField({
               }}
             />
           ))}
+          {particles.map((p) => (
+            <div
+              key={p.id}
+              className="pixel-burst pointer-events-none absolute"
+              style={
+                {
+                  left: p.left,
+                  bottom: p.bottom,
+                  width: p.size,
+                  height: p.size,
+                  backgroundColor: p.color,
+                  "--dx": `${p.dx}px`,
+                  "--dy": `${p.dy}px`,
+                } as React.CSSProperties
+              }
+            />
+          ))}
           {/* A few seconds after the first burst finishes a second plays through f-j, 23% taller,
               growing upward from the same standing baseline. A block landing on this creature's
-              column bonks it off the perch - it fades out, then pops back up wherever the stack
-              is tallest a beat later (see maybeKillCreature above). */}
-          {ele5 && (
+              column destroys it on the spot (see maybeKillCreature above, which fires the
+              particle burst) - it just stops rendering here, then pops back into existence
+              wherever the stack is tallest a beat later, replaying the same pop-in as a landed
+              block's flood fill. */}
+          {ele5?.alive && (
             <AnimatedElephant
+              key={`ele5-${ele5.col}-${ele5.row}`}
               secondaryFrames={ELE5_SECONDARY_FRAMES}
               secondaryScale={1.23}
               anchor="left"
-              className={`origin-bottom-left transition-all ease-out ${
-                ele5.alive ? "scale-100 opacity-100" : "scale-0 opacity-0"
-              }`}
+              className="origin-bottom-left animate-lego-pop"
               style={{
                 left: ele5.col * cell,
                 bottom: ele5.row * cell,
                 height: cell * 0.85 * creatureScale,
-                transitionDuration: `${CREATURE_TRANSITION_MS}ms`,
               }}
             />
           )}
           {/* Frames have different intrinsic widths at a fixed height (a fire breath), so this one
-              grows rightward from a fixed left edge rather than staying centred. Same bonk/respawn
-              behaviour as the creature above. */}
-          {ele3 && (
+              grows rightward from a fixed left edge rather than staying centred. Same
+              destroy/respawn behaviour as the creature above. */}
+          {ele3?.alive && (
             <AnimatedElephant
+              key={`ele3-${ele3.col}-${ele3.row}`}
               frames={ELE3_FRAMES}
               anchor="left"
               frameIntervalMs={350}
               repeatCount={2}
-              className={`origin-bottom-left transition-all ease-out ${
-                ele3.alive ? "scale-100 opacity-100" : "scale-0 opacity-0"
-              }`}
+              className="origin-bottom-left animate-lego-pop"
               style={{
                 left: ele3.col * cell,
                 bottom: ele3.row * cell,
                 height: cell * 0.9 * creatureScale,
-                transitionDuration: `${CREATURE_TRANSITION_MS}ms`,
               }}
             />
           )}
