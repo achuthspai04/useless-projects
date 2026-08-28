@@ -54,7 +54,7 @@ export default function MobileHero() {
         />
 
         {/* 3.0 Badge positioned top-right relative to centered title */}
-        <div className="absolute text-center" style={{ left: "320px", top: "180px", width: "76px" }}>
+        <div className="absolute text-center" style={{ left: "336px", top: "205px", width: "76px" }}>
           <Image
             src="/ele1.webp"
             alt=""
