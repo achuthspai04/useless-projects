@@ -51,6 +51,7 @@ export default function CelebratingSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const textRef = useRef<HTMLParagraphElement>(null);
   const [drawn, setDrawn] = useState(false);
+  const [popped, setPopped] = useState(false);
   const [underlineWidth, setUnderlineWidth] = useState(0);
 
   useEffect(() => {
@@ -73,6 +74,9 @@ export default function CelebratingSection() {
         if (!entry.isIntersecting) return;
         setDrawn(true);
         playScribbleSound(UNDERLINE_DURATION_S);
+        // A little celebratory pop once the underline finishes, so the section doesn't just go
+        // still right after - the one moment of motion on the page otherwise ends abruptly.
+        setTimeout(() => setPopped(true), UNDERLINE_DURATION_S * 1000);
         observer.disconnect();
       },
       { threshold: 0.5 }
@@ -135,7 +139,7 @@ export default function CelebratingSection() {
               className="absolute flex h-[165.708px] w-[372.426px] items-center justify-center"
               style={{ left: "calc(50% + 13.19px)", top: "243px", transform: "translateX(-50%)" }}
             >
-              <div className="relative flex-none rotate-[3.13deg]">
+              <div className={`relative flex-none rotate-[3.13deg] ${popped ? "animate-text-pop" : ""}`}>
                 <p
                   ref={textRef}
                   className="font-drowner relative text-center text-[104.29px] leading-[1.4] whitespace-nowrap text-[#242525] lowercase"
