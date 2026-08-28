@@ -317,26 +317,40 @@ export default function FaqSection() {
   };
 
   return (
-    <section id="faq-section" className="relative flex min-h-screen w-full snap-start snap-always items-center justify-center bg-white py-16">
-      {/* Mobile (Figma node 147:9834). The frame carries only the heading and the cards - no
-          corner dot, and no "more details?" creature. */}
-      <div className="flex w-full justify-center lg:hidden" style={MOBILE_SCALE_STYLE}>
-        <FaqBlock headerWidth={MOBILE_HEADER_WIDTH} openItems={openItems} onToggle={toggleItem} />
-      </div>
+    // h-screen (not min-h-screen) plus an inner scroller, because the answers run well past one
+    // viewport - 1350px tall on a 390x844 phone. As a taller-than-viewport snap panel under the
+    // page's mandatory y-snapping, its bottom half was simply unreachable: the scroll jumped from
+    // its snap point straight to the timer section. overflow-hidden also matches every other
+    // full-page section here, and keeps the desktop canvas below from widening the page.
+    <section
+      id="faq-section"
+      className="relative h-screen w-full snap-start snap-always overflow-hidden bg-white"
+    >
+      <div className="h-full w-full overflow-y-auto">
+        {/* min-h-full so the content still centres when it does fit, and grows (scrolling inside
+            the parent) when it doesn't. */}
+        <div className="flex min-h-full w-full items-center justify-center py-16">
+          {/* Mobile (Figma node 147:9834). The frame carries only the heading and the cards - no
+              corner dot, and no "more details?" creature. */}
+          <div className="flex w-full justify-center lg:hidden" style={MOBILE_SCALE_STYLE}>
+            <FaqBlock headerWidth={MOBILE_HEADER_WIDTH} openItems={openItems} onToggle={toggleItem} />
+          </div>
 
-      <div
-        className="relative hidden shrink-0 lg:block"
-        style={{
-          width: `${REF_WIDTH}px`,
-          minHeight: `${REF_HEIGHT}px`,
-          transform: `scale(min(1, calc(100vw / ${REF_WIDTH}px)))`,
-          transformOrigin: "top center",
-        }}
-      >
-        <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
+          <div
+            className="relative hidden shrink-0 lg:block"
+            style={{
+              width: `${REF_WIDTH}px`,
+              minHeight: `${REF_HEIGHT}px`,
+              transform: `scale(min(1, calc(100vw / ${REF_WIDTH}px)))`,
+              transformOrigin: "top center",
+            }}
+          >
+            <HoverDot assets={DOT_ASSETS} baseIndex={0} size={63.73} className="absolute" style={{ left: "1120px", top: "89px" }} />
 
-        <div className="absolute" style={{ left: "283px", top: "123px", ...DESKTOP_SCALE_STYLE }}>
-          <FaqBlock openItems={openItems} onToggle={toggleItem} />
+            <div className="absolute" style={{ left: "283px", top: "123px", ...DESKTOP_SCALE_STYLE }}>
+              <FaqBlock openItems={openItems} onToggle={toggleItem} />
+            </div>
+          </div>
         </div>
       </div>
     </section>
