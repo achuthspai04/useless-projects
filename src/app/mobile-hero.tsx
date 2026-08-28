@@ -74,8 +74,12 @@ export default function MobileHero() {
           className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-[#0e0e0d]"
           style={{ top: "310px", width: "390px", fontSize: "122px", letterSpacing: "1.9049px", lineHeight: 0.836 }}
         >
-          <p>Useless</p>
-          <p>Projects</p>
+          {/* The float lives on an inner wrapper, not the positioned box above: that one carries
+              -translate-x-1/2 for centring, and the animation's own transform would replace it. */}
+          <div className="animate-float-title">
+            <p>Useless</p>
+            <p>Projects</p>
+          </div>
         </div>
 
         {/* Tagline and reveal button centered below title */}
