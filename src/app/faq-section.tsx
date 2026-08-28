@@ -11,8 +11,6 @@ const REF_HEIGHT = 832;
 // why-section.tsx) - this dot's own base color is the same red/magenta combo as why-dot.svg.
 const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
-const EXPAND_DURATION_S = 0.35;
-
 // Both entries share the same placeholder copy from the source design - kept verbatim rather
 // than inventing new question/answer text that wasn't part of the spec.
 const FAQ_ANSWER =
@@ -55,21 +53,14 @@ function FaqItem({
         </span>
         <span
           className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#ea34df]"
-          style={{
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            transition: `transform ${EXPAND_DURATION_S}s ease`,
-          }}
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)" }}
         >
           <img src="/faq-dropdown-arrow.svg" alt="" style={{ width: "7.5px", height: "3.75px" }} />
         </span>
       </button>
 
       <div
-        style={{
-          display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
-          transition: `grid-template-rows ${EXPAND_DURATION_S}s ease`,
-        }}
+        style={{ display: "grid", gridTemplateRows: open ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden">
           <p

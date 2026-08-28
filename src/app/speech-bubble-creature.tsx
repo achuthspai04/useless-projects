@@ -70,7 +70,7 @@ export function SpeechBubbleCreature({
       <a
         href={href}
         aria-label={ariaLabel}
-        className="absolute block cursor-pointer transition-transform duration-200 ease-out hover:-translate-y-1"
+        className="absolute block cursor-pointer hover:-translate-y-1"
         style={{ left: `${left}px`, top: `${top}px` }}
       >
         {inner}

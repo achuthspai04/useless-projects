@@ -11,13 +11,7 @@ const REF_HEIGHT = 832;
 // why-section.tsx) - this dot's own base color is the same red/magenta combo as why-dot.svg.
 const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
-// Slow, deliberate rise rather than a snappy pop - a longer duration paired with an "expo out"
-// curve (fast start, long gentle settle) reads as curated instead of mechanical. The second
-// board is staggered slightly behind the first so they don't land in unison.
-const ENTRANCE_DURATION_S = 1.4;
 const ENTRANCE_DISTANCE_PX = 70;
-const ENTRANCE_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
-const ENTRANCE_STAGGER_S = 0.2;
 
 const HEADLINE_LINE_1 = "appam thinna";
 const HEADLINE_LINE_2 = "mathi, kuzhiyennanda";
@@ -28,7 +22,6 @@ const TYPE_STEP_S = 0.09;
 const TYPE_CHAR_FADE_S = 0.08;
 // How long the finished headline sits before the loop swaps to the other language.
 const LANGUAGE_HOLD_S = 1.8;
-const LANGUAGE_FADE_OUT_S = 0.4;
 
 function typeDurationS(...texts: string[]): number {
   const totalGraphemes = texts.reduce((sum, text) => sum + splitGraphemes(text).length, 0);
@@ -51,21 +44,13 @@ function splitGraphemes(text: string): string[] {
 const PHASE_DURATION_S =
   Math.max(typeDurationS(HEADLINE_LINE_1, HEADLINE_LINE_2), typeDurationS(HEADLINE_MALAYALAM)) + LANGUAGE_HOLD_S;
 
-// Renders `text` as one span per grapheme, each fading in on its own delay once `entered`.
-// `startIndex` offsets the delay so a second line continues the same typing rhythm as the first
-// instead of restarting it. Kept out of the accessibility tree - the parent supplies the real
-// text via aria-label.
-function TypedText({ text, startIndex, entered }: { text: string; startIndex: number; entered: boolean }) {
+// Renders `text` as one span per grapheme, each shown once `entered`. Kept out of the
+// accessibility tree - the parent supplies the real text via aria-label.
+function TypedText({ text, entered }: { text: string; entered: boolean }) {
   return (
     <>
       {splitGraphemes(text).map((char, i) => (
-        <span
-          key={i}
-          style={{
-            opacity: entered ? 1 : 0,
-            transition: `opacity ${TYPE_CHAR_FADE_S}s linear ${(startIndex + i) * TYPE_STEP_S}s`,
-          }}
-        >
+        <span key={i} style={{ opacity: entered ? 1 : 0 }}>
           {char}
         </span>
       ))}
@@ -101,10 +86,9 @@ export default function AppamSection() {
     return () => clearInterval(id);
   }, [entered]);
 
-  const boardStyle = (delaySeconds: number): React.CSSProperties => ({
+  const boardStyle = (): React.CSSProperties => ({
     transform: entered ? "translateY(0)" : `translateY(${ENTRANCE_DISTANCE_PX}px)`,
     opacity: entered ? 1 : 0,
-    transition: `transform ${ENTRANCE_DURATION_S}s ${ENTRANCE_EASING} ${delaySeconds}s, opacity ${ENTRANCE_DURATION_S * 0.7}s ease-out ${delaySeconds}s`,
   });
 
   return (
@@ -127,7 +111,7 @@ export default function AppamSection() {
             scroll (see the IntersectionObserver above). */}
         <div
           className="absolute"
-          style={{ left: "163px", top: "48px", width: "160px", height: "224.006px", ...boardStyle(0) }}
+          style={{ left: "163px", top: "48px", width: "160px", height: "224.006px", ...boardStyle() }}
         >
           <img
             src="/appam-stand-1.svg"
@@ -152,7 +136,7 @@ export default function AppamSection() {
             top: "538.607px",
             width: "164.402px",
             height: "241.393px",
-            ...boardStyle(ENTRANCE_STAGGER_S),
+            ...boardStyle(),
           }}
         >
           <img
@@ -188,19 +172,14 @@ export default function AppamSection() {
                   letterSpacing: "-9.1405px",
                   WebkitTextStroke: "0.6px #121211",
                   opacity: headlineLanguage === "malayalam" ? 0 : 1,
-                  transition: `opacity ${LANGUAGE_FADE_OUT_S}s ease-out`,
                 }}
               >
                 <span aria-hidden="true" style={{ whiteSpace: "nowrap" }}>
-                  <TypedText text={HEADLINE_LINE_1} startIndex={0} entered={entered && headlineLanguage === "english"} />
+                  <TypedText text={HEADLINE_LINE_1} entered={entered && headlineLanguage === "english"} />
                 </span>
                 <br />
                 <span aria-hidden="true" style={{ whiteSpace: "nowrap" }}>
-                  <TypedText
-                    text={HEADLINE_LINE_2}
-                    startIndex={HEADLINE_LINE_1.length}
-                    entered={entered && headlineLanguage === "english"}
-                  />
+                  <TypedText text={HEADLINE_LINE_2} entered={entered && headlineLanguage === "english"} />
                 </span>
               </p>
 
@@ -213,11 +192,10 @@ export default function AppamSection() {
                   lineHeight: 1.15,
                   WebkitTextStroke: "0.6px #121211",
                   opacity: headlineLanguage === "malayalam" ? 1 : 0,
-                  transition: `opacity ${LANGUAGE_FADE_OUT_S}s ease-out`,
                 }}
               >
                 <span aria-hidden="true">
-                  <TypedText text={HEADLINE_MALAYALAM} startIndex={0} entered={entered && headlineLanguage === "malayalam"} />
+                  <TypedText text={HEADLINE_MALAYALAM} entered={entered && headlineLanguage === "malayalam"} />
                 </span>
               </p>
             </div>
@@ -229,7 +207,7 @@ export default function AppamSection() {
 
           <button
             type="button"
-            className="flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#cfcfcf] hover:shadow-md active:translate-y-0"
+            className="flex cursor-pointer items-center justify-center rounded-[4.782px] bg-[#d9d9d9] hover:-translate-y-0.5 hover:bg-[#cfcfcf] hover:shadow-md active:translate-y-0"
             style={{ width: "346px", height: "100px" }}
           >
             <span

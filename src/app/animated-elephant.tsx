@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 const DEFAULT_FRAMES = ["/ele5a.webp", "/ele5b.webp", "/ele5c.webp", "/ele5d.webp", "/ele5e.webp"];
 const FRAME_INTERVAL_MS = 700;
-const CROSSFADE_MS = 150;
 const MIN_DELAY_MS = 3000;
 const MAX_DELAY_MS = 8000;
 const SECONDARY_MIN_GAP_MS = 2000;
@@ -106,7 +105,6 @@ export default function AnimatedElephant({
         style={{
           height: `${heightPct}%`,
           opacity: src === visibleSrc ? 1 : 0,
-          transition: `opacity ${CROSSFADE_MS}ms linear`,
         }}
       />
     ));

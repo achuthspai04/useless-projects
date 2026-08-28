@@ -49,15 +49,18 @@ export default function Splash({ children }: { children: React.ReactNode }) {
       {loading && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#ffffff]">
           <div className="relative h-[60px] w-[60px]">
-            <Image
-              key={IMAGES[index]}
-              src={IMAGES[index]}
-              alt=""
-              fill
-              sizes="60px"
-              className="object-contain"
-              priority
-            />
+            {IMAGES.map((src, i) => (
+              <Image
+                key={src}
+                src={src}
+                alt=""
+                fill
+                sizes="60px"
+                className="absolute inset-0 object-contain"
+                style={{ opacity: i === index ? 1 : 0 }}
+                priority
+              />
+            ))}
           </div>
         </div>
       )}

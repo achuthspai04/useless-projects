@@ -34,7 +34,7 @@ export function HoverDot({
     <img
       src={assets[isHovered ? hoverIndex : baseIndex]}
       alt=""
-      className={`cursor-pointer transition-transform duration-300 ease-out ${className ?? ""}`}
+      className={`cursor-pointer ${className ?? ""}`}
       style={{
         ...style,
         width: size,

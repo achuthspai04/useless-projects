@@ -3,7 +3,10 @@ import AppamSection from "./appam-section";
 import CelebratingSection from "./celebrating-section";
 import FaqSection from "./faq-section";
 import HeroDots from "./hero-dots";
+import HeroTagline from "./hero-tagline";
 import MobileHero from "./mobile-hero";
+import PlayTetrisBubble from "./play-tetris-bubble";
+import RevealButton from "./reveal-button";
 import SeeAllSection from "./see-all-section";
 import TimerSection from "./timer-section";
 import Title from "./title";
@@ -21,6 +24,10 @@ export default function Home() {
     <>
       <MobileHero />
       <div className="relative hidden min-h-screen shrink-0 snap-start items-center justify-center overflow-hidden lg:flex">
+        {/* Rendered before the canvas below (and so painted behind it) to match the Figma layer
+            order - the title/button/badges sit above the tetris skyline, which they slightly
+            overlap by design (e.g. the reveal button sits right at the skyline's edge). */}
+        <TetrisSkyline />
         <div
           className="absolute"
           style={{
@@ -46,18 +53,12 @@ export default function Home() {
             floatAnimation
             style={{ left: "83.4px", top: "421.2px", height: "100px" }}
           />
-          <p
-            className="font-nanum-pen absolute text-right text-black"
-            style={{ top: "118.8px", right: "40px", fontSize: "27px", lineHeight: 0.9 }}
-          >
-            exclusive to Tinkerhub
-            <br />
-            campus community
-          </p>
           <Title />
+          <HeroTagline />
+          <RevealButton />
+          <PlayTetrisBubble />
           <HeroDots />
         </div>
-        <TetrisSkyline />
       </div>
       <CelebratingSection />
       <WhySection />

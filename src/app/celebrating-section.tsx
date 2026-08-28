@@ -153,7 +153,6 @@ export default function CelebratingSection() {
                     style={{
                       strokeDasharray: 100,
                       strokeDashoffset: drawn ? 0 : 100,
-                      transition: `stroke-dashoffset ${UNDERLINE_DURATION_S}s ease-out`,
                     }}
                   />
                 </svg>

@@ -13,7 +13,6 @@ const BUTTON_HEIGHT = 364;
 // AppamSection) - the oversized card shrinks toward this before it can be clicked.
 const MIN_SCALE = 0.42;
 const SHRINK_DURATION_S = 1.3;
-const RESET_DURATION_S = 0.35;
 const POP_DURATION_S = 0.25;
 
 type Phase = "idle" | "shrinking" | "ready" | "popped";
@@ -54,9 +53,6 @@ export default function SeeAllSection() {
   }, [phase]);
 
   const scale = phase === "idle" ? 1 : phase === "popped" ? MIN_SCALE * 0.9 : MIN_SCALE;
-  const transitionDuration =
-    phase === "idle" ? RESET_DURATION_S : phase === "popped" ? POP_DURATION_S : SHRINK_DURATION_S;
-  const transitionEasing = phase === "shrinking" ? "linear" : "ease-out";
 
   return (
     <section className="relative flex min-h-screen w-full snap-start items-center justify-center overflow-hidden bg-white">
@@ -79,7 +75,7 @@ export default function SeeAllSection() {
               ? "See all 1200 projects. Click to open."
               : "See all 1200 projects. Hover and hold until it stops shrinking, then click."
           }
-          className="absolute block rounded-[17.444px] bg-[#d9d9d9] transition-colors duration-200 ease-out hover:bg-[#cfcfcf]"
+          className="absolute block rounded-[17.444px] bg-[#d9d9d9] hover:bg-[#cfcfcf]"
           style={{
             left: "221px",
             top: "234px",
@@ -87,7 +83,6 @@ export default function SeeAllSection() {
             height: `${BUTTON_HEIGHT}px`,
             cursor: phase === "ready" ? "pointer" : "default",
             transform: `scale(${scale})`,
-            transition: `transform ${transitionDuration}s ${transitionEasing}, background-color 0.2s ease-out`,
           }}
         >
           <span

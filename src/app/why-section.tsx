@@ -100,7 +100,6 @@ export default function WhySection() {
                 width: "102.33px",
                 height: "100.258px",
                 clipPath: arrowDrawn ? "inset(0% 0% 0% 0%)" : "inset(0% 0% 100% 0%)",
-                transition: `clip-path ${ARROW_DRAW_DURATION_S}s ease-out`,
               }}
             />
 
