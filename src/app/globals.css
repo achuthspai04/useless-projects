@@ -22,6 +22,13 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* The root layout puts mandatory scroll snapping on <html> for the home page, which is a deck of
+   full-screen panels. Document routes opt out by marking themselves, rather than the snapping
+   having to be toggled from JS after paint. */
+html:has([data-page="handbook"]) {
+  scroll-snap-type: none;
+}
+
 @keyframes float-slow {
   0%,
   100% {
