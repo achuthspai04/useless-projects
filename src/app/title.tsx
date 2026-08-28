@@ -6,7 +6,7 @@ export default function Title() {
     <div
       className="absolute"
       style={{
-        top: "332px",
+        top: "287px",
         left: "50%",
         transform: "translateX(-50%)",
       }}
@@ -14,7 +14,7 @@ export default function Title() {
       <h1
         className="font-drowner text-center text-[#0e0e0d]"
         style={{
-          fontSize: "160px",
+          fontSize: "185.22px",
           fontWeight: 342,
           lineHeight: 0.836,
           letterSpacing: "0.02em",
@@ -24,7 +24,7 @@ export default function Title() {
         <span className="block">Projects</span>
       </h1>
       <Floating sensitivity={0.5} easingFactor={0.06} className="pointer-events-none">
-        <FloatingElement depth={1} style={{ top: "-178px", right: "-43px" }}>
+        <FloatingElement depth={1} style={{ top: "-188px", right: "-53px" }}>
           <ElephantBadge />
         </FloatingElement>
       </Floating>

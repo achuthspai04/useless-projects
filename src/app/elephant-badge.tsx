@@ -3,20 +3,21 @@ import Image from "next/image";
 export default function ElephantBadge() {
   return (
     <span className="relative inline-block">
-      <span className="font-jrk text-black" style={{ fontSize: "168px" }}>
+      <span className="font-jrk text-black" style={{ fontSize: "175.959px" }}>
         3.0
       </span>
       <Image
         src="/ele1.webp"
         alt=""
         width={90}
-        height={82}
+        height={81}
         className="absolute"
         style={{
           left: "50%",
-          top: "-15px",
+          top: "-10px",
           width: "90px",
-          height: "82px",
+          height: "81px",
+          maxWidth: "none",
           transform: "translateX(-50%)",
         }}
       />

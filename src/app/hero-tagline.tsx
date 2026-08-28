@@ -6,8 +6,8 @@
 export default function HeroTagline() {
   return (
     <p
-      className="font-nanum-pen absolute left-1/2 -translate-x-1/2 text-center text-[#100f0f]"
-      style={{ top: "810px", width: "219px", fontSize: "14.638px", lineHeight: "11.877px" }}
+      className="font-nanum-pen absolute left-1/2 -translate-x-1/2 text-center whitespace-nowrap text-[#100f0f]"
+      style={{ top: "630px", width: "600px", fontSize: "26px", lineHeight: "16px" }}
     >
       exclusive to Tinkerhub campus community
     </p>

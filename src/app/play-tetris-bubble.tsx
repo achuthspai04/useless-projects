@@ -4,7 +4,7 @@
 // scaled by the site's 1.5x position factor (see hero-dots.tsx); size stays at Figma's raw px value.
 export default function PlayTetrisBubble() {
   return (
-    <div className="absolute" style={{ left: "135px", top: "745.5px", width: "157px", height: "109px" }}>
+    <div className="absolute" style={{ left: "135px", top: "605.5px", width: "157px", height: "109px" }}>
       <img
         src="/timer-bubble.svg"
         alt=""

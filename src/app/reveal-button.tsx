@@ -4,13 +4,14 @@
 // size and font stay at Figma's raw px values.
 export default function RevealButton() {
   return (
-    <div
-      className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center bg-black"
-      style={{ top: "856.5px", width: "296px", height: "78px", paddingTop: "24px", paddingBottom: "23px", paddingLeft: "63px", paddingRight: "63px" }}
+    <button
+      type="button"
+      className="absolute left-1/2 flex -translate-x-1/2 cursor-pointer items-center justify-center bg-black hover:-translate-y-0.5 hover:bg-[#2a2a2a] hover:shadow-md active:translate-y-0"
+      style={{ top: "676.5px", width: "296px", height: "78px", paddingTop: "24px", paddingBottom: "23px", paddingLeft: "63px", paddingRight: "63px" }}
     >
       <p className="font-nanum-pen text-center whitespace-nowrap text-white" style={{ fontSize: "37.517px", lineHeight: "30.44px" }}>
         Click here to reveal!
       </p>
-    </div>
+    </button>
   );
 }
