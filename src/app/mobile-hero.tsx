@@ -57,7 +57,10 @@ export default function MobileHero() {
           style={{ left: "48px", top: "140px", height: "48px" }}
         />
 
-        <div className="absolute text-center" style={{ left: "326px", top: "205px", width: "76px" }}>
+        {/* Nudged down and in from the Figma spot (326, 205), which left it stranded up in the
+            corner - it now sits just off the title's top-right, and the little creature above it
+            comes along since it's positioned within this same box. */}
+        <div className="absolute text-center" style={{ left: "292px", top: "250px", width: "76px" }}>
           <Image
             src="/ele1.webp"
             alt=""
@@ -73,7 +76,9 @@ export default function MobileHero() {
 
         <div
           className="font-drowner absolute text-[#0e0e0d]"
-          style={{ left: "48px", top: "298px", width: "306px", fontSize: "95.245px", letterSpacing: "1.9049px", lineHeight: "normal" }}
+          // Same tight leading as the desktop title (see title.tsx) - the browser default of
+          // ~1.2 left far too much air between "Useless" and "Projects" at this size.
+          style={{ left: "48px", top: "298px", width: "306px", fontSize: "95.245px", letterSpacing: "1.9049px", lineHeight: 0.836 }}
         >
           <p>Useless</p>
           <p>Projects</p>

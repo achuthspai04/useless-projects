@@ -36,6 +36,21 @@ body {
   animation: float-slow 6s ease-in-out infinite;
 }
 
+/* Slow breathing pulse for the hero dots. */
+@keyframes dot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+.animate-dot-breathe {
+  animation: dot-breathe 3.6s ease-in-out infinite;
+}
+
 /* Each cell of the end-of-round flood fill pops in, staggered by row so the fill sweeps upward. */
 @keyframes lego-pop {
   from {
