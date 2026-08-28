@@ -34,8 +34,8 @@ const FLOOD_ROW_STAGGER_MS = 55;
 const FLOOD_HOLD_MS = 1100;
 const RESET_PAUSE_MS = 500;
 // How long a perched creature stays gone after getting bonked before it pops back up somewhere
-// else.
-const CREATURE_RESPAWN_MS = 700;
+// else - long enough to read as an actual respawn wait, not an instant teleport.
+const CREATURE_RESPAWN_MS = 1600;
 const PARTICLE_LIFETIME_MS = 550;
 // Blocky debris colors, sampled per event rather than per creature - a handful of hot colors for
 // the "destroyed" burst, cooler/brighter ones for the "spawned" sparkle, Minecraft-particle style.
@@ -381,6 +381,7 @@ export default function TetrisField({
     const maybeKillCreature = (
       creatureRef: typeof ele3Ref,
       setCreature: typeof setEle3,
+      otherRef: typeof ele3Ref,
       blockCol: number,
       blockCols: number
     ) => {
@@ -393,10 +394,13 @@ export default function TetrisField({
       setCreature(dead);
       after(CREATURE_RESPAWN_MS, () => {
         const surface = surfaceRef.current;
+        // Never on the spot it just died at, and never on top of wherever the other creature
+        // currently is (dead or alive) - a fresh spawn colliding with it would look wrong.
+        const otherCol = otherRef.current?.col;
         let bestCol = 0;
         let bestRow = -Infinity;
         for (let col = 0; col < columns; col++) {
-          if (col === c.col && columns > 1) continue;
+          if (columns > 1 && (col === c.col || col === otherCol)) continue;
           if (surface[col] > bestRow) {
             bestRow = surface[col];
             bestCol = col;
@@ -495,8 +499,8 @@ export default function TetrisField({
                   const lift = topLift[i];
                   if (lift !== null) surfaceRef.current[block.col + i] = block.bottom + lift;
                 }
-                maybeKillCreature(ele3Ref, setEle3, block.col, cols);
-                maybeKillCreature(ele5Ref, setEle5, block.col, cols);
+                maybeKillCreature(ele3Ref, setEle3, ele5Ref, block.col, cols);
+                maybeKillCreature(ele5Ref, setEle5, ele3Ref, block.col, cols);
                 setActive(null);
                 after(LAND_PAUSE_MS, spawn);
               });
