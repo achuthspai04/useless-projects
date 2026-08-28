@@ -82,7 +82,7 @@ type Project = {
 // a project is adding a row here, plus its two photos below.
 const PROJECTS: Project[] = [
   {
-    credit: "Made by: Adithya & Team · TinkerHub RIT",
+    credit: "Made by: Ashin & Aibel · SJCET Palai",
     english: "appam thinna mathi, kuzhiyennanda",
     linesDesktop: ["appam thinna", "mathi, kuzhiyennanda"],
     linesMobile: ["appam", "thinna mathi,", "kuzhiyennanda"],
