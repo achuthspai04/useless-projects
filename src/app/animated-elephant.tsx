@@ -11,6 +11,7 @@ const SECONDARY_MAX_GAP_MS = 5000;
 
 export default function AnimatedElephant({
   style,
+  className,
   frames = DEFAULT_FRAMES,
   secondaryFrames,
   secondaryScale = 1,
@@ -22,6 +23,9 @@ export default function AnimatedElephant({
   floatAnimation = false,
 }: {
   style?: React.CSSProperties;
+  /** Merged alongside the root div's own "absolute" (+ "animate-float-slow" if floatAnimation),
+   * so a caller can layer on its own transition/transform classes without fighting the base ones. */
+  className?: string;
   frames?: string[];
   /** A second burst sequence that plays a random few-second gap after the first loop finishes,
    * using the same frame timing/repeat count and resting back on `frames[0]` when done. */
@@ -110,7 +114,10 @@ export default function AnimatedElephant({
     ));
 
   return (
-    <div className={floatAnimation ? "absolute animate-float-slow" : "absolute"} style={style}>
+    <div
+      className={[floatAnimation ? "absolute animate-float-slow" : "absolute", className].filter(Boolean).join(" ")}
+      style={style}
+    >
       {renderFrames(frames, 100)}
       {secondaryFrames && renderFrames(secondaryFrames, 100 * secondaryScale)}
     </div>
