@@ -166,11 +166,26 @@ export default function TimerSection() {
           reference box - the same placement the hero gives its own field. */}
       {revealed && (
         <>
+          {/* Mobile's cells are a third the size of desktop's, so its cards take a proportionally
+              bigger footprint (still 2:3) to come out physically similar, and wrap two per row to
+              stay inside the narrower board. */}
           <div className="absolute inset-0 z-10 lg:hidden">
-            <CuriosityReveal targetCell={MOBILE_TARGET_CELL} onClose={() => setRevealed(false)} />
+            <CuriosityReveal
+              targetCell={MOBILE_TARGET_CELL}
+              cardCols={4}
+              cardRows={6}
+              perRow={2}
+              onClose={() => setRevealed(false)}
+            />
           </div>
           <div className="absolute inset-0 z-10 hidden lg:block">
-            <CuriosityReveal targetCell={DESKTOP_TARGET_CELL} onClose={() => setRevealed(false)} />
+            <CuriosityReveal
+              targetCell={DESKTOP_TARGET_CELL}
+              cardCols={2}
+              cardRows={3}
+              perRow={4}
+              onClose={() => setRevealed(false)}
+            />
           </div>
         </>
       )}

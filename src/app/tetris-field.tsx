@@ -244,6 +244,7 @@ export default function TetrisField({
   prefill = 0,
   creatureScale = 1,
   flooded = false,
+  overlay,
 }: {
   /** Preferred cell size in px; the column count is derived from it and the measured width. */
   targetCell: number;
@@ -259,6 +260,10 @@ export default function TetrisField({
    *  as too tiny to read - this lets a caller boost them back up without touching the block grid
    *  itself. */
   creatureScale?: number;
+  /** Content painted over the finished board, handed the grid this field worked out for itself so
+   *  it can sit on real cell boundaries - `unit` is the gap between neighbouring studs, so a patch
+   *  spanning n cells measures `n * cell - unit` to leave the same seam the blocks do. */
+  overlay?: (grid: { columns: number; rows: number; cell: number; unit: number }) => React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ width: number; height: number } | null>(null);
@@ -627,6 +632,7 @@ export default function TetrisField({
               }}
             />
           ))}
+          {overlay?.({ columns, rows, cell, unit })}
           {particles.map((p) => (
             <div
               key={p.id}
