@@ -243,12 +243,17 @@ export default function TetrisField({
   targetCell,
   prefill = 0,
   creatureScale = 1,
+  flooded = false,
 }: {
   /** Preferred cell size in px; the column count is derived from it and the measured width. */
   targetCell: number;
   /** Fraction of the screen's height already stacked when the visitor arrives. 0 leaves just the
    *  low base course. */
   prefill?: number;
+  /** Renders the round's finished board and holds it there: the skyline played all the way to the
+   *  top, every cell still showing through plugged by a stud - the same end state floodAndReset
+   *  produces, minus the drop loop, the reset, and the perched creatures. */
+  flooded?: boolean;
   /** Extra multiplier on top of the two perched creatures' cell-relative height. They're sized
    *  relative to the lego block grid by design, but at mobile's much smaller targetCell that reads
    *  as too tiny to read - this lets a caller boost them back up without touching the block grid
@@ -301,7 +306,9 @@ export default function TetrisField({
   const cell = columns ? size!.width / columns : 0;
   const rows = columns ? Math.max(SKYLINE_ROWS + 1, Math.ceil(size!.height / cell)) : 0;
 
-  const fillRows = columns ? Math.max(SKYLINE_ROWS, Math.round(rows * prefill)) : 0;
+  // Flooded plays the board all the way to the top, so the real lego shapes reach the ceiling and
+  // the studs only ever fill what those shapes left over - same as a round that ran to completion.
+  const fillRows = columns ? Math.max(SKYLINE_ROWS, Math.round(rows * (flooded ? 1 : prefill))) : 0;
   const skyline = useMemo(
     () => (columns ? buildSkyline(columns, fillRows) : null),
     [columns, fillRows]
@@ -315,8 +322,28 @@ export default function TetrisField({
     skylineRef.current = skyline;
   }, [rows, skyline]);
 
+  // Flooded boards are a single static render, so they get their own effect rather than an early
+  // exit inside the drop loop's: it can depend on `rows` directly (a height-only resize needs to
+  // re-plug the newly exposed cells) without that dep restarting the game for everyone else.
   useEffect(() => {
-    if (!columns || !skyline) return;
+    if (!flooded || !columns || !skyline) return;
+    const cells: FloodCell[] = [];
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        if (skyline.cells.has(`${col},${row}`)) continue;
+        cells.push({
+          col,
+          row,
+          color: LEGO_COLOR_NAMES[Math.floor(Math.random() * LEGO_COLOR_NAMES.length)],
+        });
+      }
+    }
+    setFlood(cells);
+    return () => setFlood(null);
+  }, [flooded, columns, skyline, rows]);
+
+  useEffect(() => {
+    if (flooded || !columns || !skyline) return;
     const timers: number[] = [];
     const frames: number[] = [];
     let cancelled = false;
@@ -528,7 +555,7 @@ export default function TetrisField({
       setEle5(null);
       setParticles([]);
     };
-  }, [columns, skyline]);
+  }, [columns, skyline, flooded]);
 
   const unit = cell / PITCH;
   const place = ({ col, bottom, shape }: Placed) => ({
@@ -549,7 +576,10 @@ export default function TetrisField({
               shape={piece.shape}
               color={piece.color}
               data-tetris-block="skyline"
-              className="absolute"
+              // A flooded board is a one-shot reveal, so the standing shapes pop in with the studs
+              // rather than being there already - otherwise most of the board (these) just appears
+              // and only the leftover gaps animate.
+              className={flooded ? "animate-lego-pop absolute" : "absolute"}
               style={place(piece)}
             />
           ))}
@@ -591,7 +621,9 @@ export default function TetrisField({
                 bottom: row * cell,
                 width: (PITCH - 1) * unit,
                 height: (PITCH - 1) * unit,
-                animationDelay: `${row * FLOOD_ROW_STAGGER_MS}ms`,
+                // The end-of-round flood sweeps upward row by row; a flooded board is instead
+                // revealed as one piece, so every cell lands together.
+                animationDelay: flooded ? "0ms" : `${row * FLOOD_ROW_STAGGER_MS}ms`,
               }}
             />
           ))}
