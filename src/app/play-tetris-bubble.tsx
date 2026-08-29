@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const APPEAR_DELAY_MS = 3000;
 const VISIBLE_MS = 4000;
 const HIDDEN_MS = 6000;
+
+// Alternates each time the bubble reappears - the first message is the original hook ("there's a
+// game hiding here"), the second is the actual instructions for the click-to-change-shape feature
+// on the tetris field behind it.
+const MESSAGES = ["play tetris?", "click to change\nshape!"];
 
 // The standalone "play tetris?" bubble from the Figma hero (node 147:7775) - reuses the same
 // cloud shape as TimerSection's bubble (see speech-bubble-creature.tsx), but with no creature
@@ -13,11 +18,15 @@ const HIDDEN_MS = 6000;
 // timer instead of staying on screen permanently.
 export default function PlayTetrisBubble() {
   const [isVisible, setIsVisible] = useState(false);
+  const [message, setMessage] = useState(MESSAGES[0]);
+  const messageIndexRef = useRef(0);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
 
     const showThenHide = () => {
+      setMessage(MESSAGES[messageIndexRef.current % MESSAGES.length]);
+      messageIndexRef.current++;
       setIsVisible(true);
       timer = setTimeout(() => {
         setIsVisible(false);
@@ -47,7 +56,7 @@ export default function PlayTetrisBubble() {
         className="font-nanum-pen absolute -translate-x-1/2 whitespace-pre-wrap text-center text-[#100f0f]"
         style={{ left: "78.5px", top: "31px", width: "107px", fontSize: "29.089px", lineHeight: "23.602px" }}
       >
-        play tetris?
+        {message}
       </p>
     </div>
   );

@@ -30,6 +30,9 @@ const MAX_COLUMNS = 44;
 
 const FALL_ROWS_PER_MS = 0.0065;
 const LAND_PAUSE_MS = 110;
+// A shape swap inside this final stretch of the fall gets ignored - too little runway left to
+// fall to a new shape's landing row, so it would otherwise snap into place instead of dropping.
+const NEAR_LAND_LOCK_MS = 160;
 const FLOOD_ROW_STAGGER_MS = 55;
 const FLOOD_HOLD_MS = 1100;
 const RESET_PAUSE_MS = 500;
@@ -283,8 +286,10 @@ export default function TetrisField({
   const [falling, setFalling] = useState(false);
   const [flood, setFlood] = useState<FloodCell[] | null>(null);
   const surfaceRef = useRef<number[]>([]);
-  // Mirrors `active`, so a key press or swipe can read/move the falling piece without depending on
-  // it (which would restart the whole game loop below on every move).
+  // Mirrors `active`, so a key press, swipe, click, or space bar can read/move/reshape the falling
+  // piece without depending on it (which would restart the whole game loop below on every change).
+  // Cleared the moment a block lands, which is also the signal that it can no longer be moved or
+  // reshaped - the next `active` is a fresh spawn.
   const activeRef = useRef<Falling | null>(null);
   // Mirrors `stack`, so the drop loop can read what has landed without a state updater. Reading
   // it through setStack would mean running the round-end logic inside an updater, and React
@@ -497,9 +502,9 @@ export default function TetrisField({
       after(rowsRef.current * FLOOD_ROW_STAGGER_MS + FLOOD_HOLD_MS, reset);
     };
 
-    // Runs once a piece finishes falling, wherever it ended up (its spawn column or, after a
-    // move, wherever it was shifted to). Updates the stack/surface, then either ends the round or
-    // spawns the next piece.
+    // Runs once a piece finishes falling, wherever it ended up (its spawn column/shape or, after a
+    // move or a shape change, wherever it was shifted or swapped to). Updates the stack/surface,
+    // then either ends the round or spawns the next piece.
     const land = (landed: Falling) => {
       landedRef.current = [...landedRef.current, landed];
       setStack(landedRef.current);
@@ -561,7 +566,64 @@ export default function TetrisField({
       timers.push(landTimerId);
     };
 
+    // Swaps the falling piece for the next shape in rotation (click/tap anywhere, or space - see
+    // the listeners below), keeping its column and re-landing it against the current surface, same
+    // idea as moveActive above but changing shape instead of column. Freezes once the piece is too
+    // close to touching down (see NEAR_LAND_LOCK_MS) - a swap that late has barely any row left to
+    // fall, so landing a taller/differently-lipped shape would mean snapping it into place instead
+    // of dropping, which reads as a glitch.
+    const cycleActiveShape = () => {
+      const cur = activeRef.current;
+      if (!cur) return;
+      const elapsed = Date.now() - cur.legStartedAt;
+      if (cur.fallMs - elapsed < NEAR_LAND_LOCK_MS) return;
+      // Where the piece actually is right now, not where it started or where it's headed - so
+      // swapping shapes mid-fall doesn't make it visibly jump.
+      const currentRow = cur.legStartRow - FALL_ROWS_PER_MS * elapsed;
+      const limit = rowsRef.current;
+      const surface = surfaceRef.current;
+
+      const startIndex = LEGO_DROP_SHAPES.indexOf(cur.shape);
+      for (let step = 1; step <= LEGO_DROP_SHAPES.length; step++) {
+        const shape = LEGO_DROP_SHAPES[(startIndex + step) % LEGO_DROP_SHAPES.length];
+        const { cols, rows: shapeH } = GEOMETRY[shape];
+        if (cur.col + cols > columns) continue;
+        const landing = landingRow(surface, cur.col, shape);
+        if (landing + shapeH > limit) continue;
+        // Always the real resting row for the new shape, even if that's *above* where the piece
+        // currently sits - a different shape's footprint can need more clearance than the old one
+        // did, and landing below that would sink the piece into the stack it's supposed to rest
+        // on. The short animated hop up reads fine; it's rare and only ever small.
+        const fallMs = Math.max(60, Math.abs(currentRow - landing) / FALL_ROWS_PER_MS);
+        const next: Falling = {
+          ...cur,
+          shape,
+          bottom: landing,
+          fallMs,
+          legStartRow: currentRow,
+          legStartedAt: Date.now(),
+        };
+        activeRef.current = next;
+        setActive(next);
+        if (landTimerId !== null) clearTimeout(landTimerId);
+        landTimerId = window.setTimeout(() => {
+          if (!cancelled) land(activeRef.current ?? next);
+        }, fallMs);
+        timers.push(landTimerId);
+        return;
+      }
+    };
+
+    const isInteractive = (target: EventTarget | null) =>
+      target instanceof Element && target.closest("a, button, input, textarea, select, [role='button']");
+
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" || e.key === " ") {
+        if (isInteractive(document.activeElement)) return;
+        e.preventDefault();
+        cycleActiveShape();
+        return;
+      }
       // Ignore the OS's auto-repeat while a key is held - one press should move one column, not
       // several in a burst.
       if (e.repeat) return;
@@ -569,6 +631,17 @@ export default function TetrisField({
       else if (e.key === "ArrowRight") moveActive(1);
     };
     window.addEventListener("keydown", onKeyDown);
+
+    // Click/tap anywhere on the page cycles the falling piece's shape, same as space - but not
+    // over an actual interactive element (links, buttons, form controls), so the rest of the page
+    // still works normally. A plain tap falls through to here (a swipe's tap-like touchend won't
+    // have moved far enough to read as a swipe below, but the browser still fires a click after
+    // it), which is what makes tapping reshape on mobile while swiping moves.
+    const onClick = (e: MouseEvent) => {
+      if (isInteractive(e.target)) return;
+      cycleActiveShape();
+    };
+    document.addEventListener("click", onClick);
 
     let touchStartX: number | null = null;
     const SWIPE_THRESHOLD_PX = 30;
@@ -637,8 +710,9 @@ export default function TetrisField({
               // Driven by a timer rather than `transitionend` so a throttled or backgrounded tab
               // that never fires the event can't strand the loop with nothing falling.
               landTimerId = window.setTimeout(() => {
-                // Read the current (possibly moved-since-spawn) position rather than the spot this
-                // closure captured, so a piece nudged sideways lands where it's actually sitting.
+                // Read the current (possibly moved/reshaped-since-spawn) position rather than the
+                // spot this closure captured, so a piece nudged sideways or swapped lands where
+                // it's actually sitting.
                 if (!cancelled) land(activeRef.current ?? started);
               }, fallMs);
               timers.push(landTimerId);
@@ -655,13 +729,14 @@ export default function TetrisField({
       timers.forEach(clearTimeout);
       frames.forEach(cancelAnimationFrame);
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("click", onClick);
       fieldEl?.removeEventListener("touchstart", onTouchStart);
       fieldEl?.removeEventListener("touchend", onTouchEnd);
       // StrictMode mounts effects twice in dev; drop the discarded run's blocks so they don't
       // linger as a frozen stack alongside the real run's.
       landedRef.current = [];
-      setStack([]);
       activeRef.current = null;
+      setStack([]);
       setActive(null);
       setFlood(null);
       ele3Ref.current = null;

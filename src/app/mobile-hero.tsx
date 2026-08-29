@@ -4,6 +4,7 @@ import HeroTagline from "./hero-tagline";
 import { HoverDot } from "./hover-dot";
 import RevealButton from "./reveal-button";
 import TetrisField from "./tetris-field";
+import TetrisHint from "./tetris-hint";
 
 // ele4e.webp doesn't exist in public/ - the transition skips from d straight to f (same gap the
 // desktop hero works around).
@@ -40,7 +41,7 @@ export default function MobileHero() {
         <HoverDot assets={DOT_ASSETS} baseIndex={1} size={34.52} className="absolute" style={{ left: "53px", top: "65px" }} />
         <HoverDot assets={DOT_ASSETS} baseIndex={0} size={34.52} className="absolute" style={{ left: "105.52px", top: "65px" }} />
         <HoverDot assets={DOT_ASSETS} baseIndex={3} size={20.16} className="absolute" style={{ left: "404.28px", top: "144px" }} />
-        <HoverDot assets={DOT_ASSETS} baseIndex={2} size={39.28} className="absolute" style={{ left: "13px", top: "513.856px" }} />
+        <HoverDot assets={DOT_ASSETS} baseIndex={2} size={39.28} className="absolute" style={{ left: "13px", top: "565px" }} />
 
         {/* Standalone creature, top-left */}
         <AnimatedElephant
@@ -85,6 +86,11 @@ export default function MobileHero() {
         {/* Tagline and reveal button centered below title */}
         <HeroTagline top={530} width={402} fontSize={24} lineHeight={22} />
         <RevealButton top={570} width={260} height={64} fontSize={29} lineHeight={24} />
+
+        {/* Flags that the skyline behind everything is tappable, not just decoration - pops in and
+            out on its own timer and stops for good once the visitor has actually tapped a few
+            times (see tetris-hint.tsx). */}
+        <TetrisHint />
       </div>
     </div>
   );
