@@ -26,6 +26,14 @@ export default function Splash({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (pageLoaded) return;
+    // `load` only ever fires once per navigation - if it already fired before this effect ran
+    // (a real race: readyState was "loading" at the lazy-init above, but "complete" by the time
+    // hydration attaches this listener), no future event was ever coming and the splash would
+    // sit there forever. Checking readyState directly here closes that gap.
+    if (document.readyState === "complete") {
+      setPageLoaded(true);
+      return;
+    }
     const onLoad = () => setPageLoaded(true);
     window.addEventListener("load", onLoad);
     return () => window.removeEventListener("load", onLoad);

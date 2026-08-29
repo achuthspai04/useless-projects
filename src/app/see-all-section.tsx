@@ -160,18 +160,21 @@ export default function SeeAllSection() {
             see all
           </span>
           <span
-            className="font-nanum-pen absolute text-center text-[#e82803] lowercase"
+            className="font-nanum-pen absolute text-center whitespace-nowrap text-[#e82803] lowercase"
             style={{
               left: "56.99%",
               right: 0,
               top: 0,
               bottom: "60.99%",
-              fontSize: "101.706px",
+              // Shrunk from 101.706px (which fit the old "(2390)") so the longer string still
+              // clears its box on one line - measured in the browser at ~92.7% of that size before
+              // it touches the "see all" headline above it.
+              fontSize: "90px",
               letterSpacing: "-9.1535px",
               lineHeight: 1.4,
             }}
           >
-            (2390)
+            (2390 projects)
           </span>
         </div>
 
