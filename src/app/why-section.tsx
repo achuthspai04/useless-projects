@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
 
@@ -151,10 +152,12 @@ export default function WhySection() {
             borderRadius: "4.799px",
           }}
         >
-          <img
+          <Image
             src="/holderyt.webp"
             alt="Coming soon"
-            className="absolute inset-0 size-full object-cover object-center"
+            fill
+            sizes="335px"
+            className="object-cover object-center"
           />
         </div>
       </div>
@@ -241,10 +244,12 @@ export default function WhySection() {
             />
 
             <div className="absolute inset-0 overflow-hidden rounded-[5.934px] bg-[#d2800f]">
-              <img
+              <Image
                 src="/holderyt.webp"
                 alt="Coming soon"
-                className="absolute inset-0 size-full object-cover object-center"
+                fill
+                sizes={`${Math.ceil(VIDEO_WIDTH_PX)}px`}
+                className="object-cover object-center"
               />
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
+import Image from "next/image";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
 
@@ -242,7 +243,10 @@ function ProjectBoard({
         className="absolute overflow-hidden"
         style={{ left: 0, top: 0, width: `${board.width}px`, height: `${board.photoHeight}px` }}
       >
-        <img src={photo} alt={alt} className="absolute inset-0 size-full object-cover" />
+        {/* A real photo (unlike the sprite-style animation frames elsewhere), so it's worth
+            next/image's automatic resizing/format negotiation - `fill` since this box already
+            carries the board's exact pixel size. */}
+        <Image src={photo} alt={alt} fill sizes={`${Math.ceil(board.width)}px`} className="object-cover" />
       </div>
     </div>
   );

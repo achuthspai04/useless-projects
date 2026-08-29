@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const DEFAULT_FRAMES = ["/ele5a.webp", "/ele5b.webp", "/ele5c.webp", "/ele5d.webp", "/ele5e.webp"];
 const FRAME_INTERVAL_MS = 700;
@@ -64,6 +64,15 @@ export default function AnimatedElephant({
 }) {
   const idleSrc = frames[0];
   const [visibleSrc, setVisibleSrc] = useState(idleSrc);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Both breakpoints' heroes (and their creatures) are mounted at once and switched with
+  // CSS display:none rather than unmounted (see mobile-hero.tsx / page.tsx), so without this a
+  // hidden creature would sit there forever running its burst scheduler and re-rendering itself
+  // for something nobody can see. `offsetParent === null` is the standard display:none check -
+  // this component's own root div has no intrinsic size (its children are all position:absolute,
+  // which don't contribute to a parent's auto size), so a ResizeObserver on itself would read
+  // zero-size *always*, hidden or not.
+  const isHidden = () => rootRef.current !== null && rootRef.current.offsetParent === null;
 
   useEffect(() => {
     const timeouts: ReturnType<typeof setTimeout>[] = [];
@@ -90,6 +99,12 @@ export default function AnimatedElephant({
       const delay = minDelayMs + Math.random() * (maxDelayMs - minDelayMs);
       timeouts.push(
         setTimeout(() => {
+          // Hidden (display:none) - skip this burst rather than animating/re-rendering off-screen,
+          // and just try again after another random idle gap.
+          if (isHidden()) {
+            scheduleNext();
+            return;
+          }
           const hasSecondary = secondaryFrames && secondaryFrames.length > 0;
           onBurstChange?.(true);
           const primaryEnd = play(
@@ -140,6 +155,7 @@ export default function AnimatedElephant({
 
   return (
     <div
+      ref={rootRef}
       className={[
         floatAnimation ? "absolute animate-float-slow" : "absolute",
         onClick ? "cursor-pointer" : "",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AnimatedElephant from "./animated-elephant";
 import LegoBlock, {
   columnBottoms,
@@ -336,10 +336,20 @@ export default function TetrisField({
   // Flooded plays the board all the way to the top, so the real lego shapes reach the ceiling and
   // the studs only ever fill what those shapes left over - same as a round that ran to completion.
   const fillRows = columns ? Math.max(SKYLINE_ROWS, Math.round(rows * (flooded ? 1 : prefill))) : 0;
-  const skyline = useMemo(
-    () => (columns ? buildSkyline(columns, fillRows) : null),
-    [columns, fillRows]
-  );
+  // Built off the synchronous render path rather than in a plain useMemo: for a tall fillRows
+  // (a flooded reveal board, or mobile's prefill against a long viewport) this walks a four-figure
+  // guard loop, and running that inline during render was extra main-thread time before first
+  // paint for no visible benefit - the skyline already pops in a frame later than the very first
+  // render anyway, while this same state waits on the ResizeObserver's first size report.
+  const [skyline, setSkyline] = useState<ReturnType<typeof buildSkyline> | null>(null);
+  useEffect(() => {
+    if (!columns) {
+      setSkyline(null);
+      return;
+    }
+    const id = setTimeout(() => setSkyline(buildSkyline(columns, fillRows)), 0);
+    return () => clearTimeout(id);
+  }, [columns, fillRows]);
 
   // Held in refs so the drop loop can read the latest values without restarting on every resize.
   const rowsRef = useRef(rows);
