@@ -38,8 +38,44 @@ const helvetica = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "useless-projects",
-  description: "",
+  metadataBase: new URL("https://useless.tinkerhub.org"),
+  title: {
+    default: "Useless Projects 3.0 | TinkerHub",
+    template: "%s | Useless Projects 3.0",
+  },
+  description:
+    "Useless Projects 3.0 is TinkerHub's overnight make-a-thon — campus makers build brilliantly impractical tech, just for the joy of making. Exclusive to the TinkerHub Campus Community.",
+  keywords: [
+    "Useless Projects",
+    "Useless Projects 3.0",
+    "TinkerHub",
+    "TinkerHub Useless Projects",
+    "TinkerHub makeathon",
+    "TinkerHub campus community",
+    "TinkerHub RIT",
+    "Kerala hackathon",
+    "student makeathon Kerala",
+  ],
+  authors: [{ name: "TinkerHub" }],
+  creator: "TinkerHub",
+  publisher: "TinkerHub Foundation",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Useless Projects 3.0 | TinkerHub",
+    description:
+      "An overnight make-a-thon for the TinkerHub Campus Community — build something brilliantly impractical, just for the joy of making.",
+    url: "https://useless.tinkerhub.org",
+    siteName: "Useless Projects",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Useless Projects 3.0 | TinkerHub",
+    description:
+      "TinkerHub's overnight make-a-thon for brilliantly impractical tech. Exclusive to the Campus Community.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

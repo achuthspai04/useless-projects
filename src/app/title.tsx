@@ -5,6 +5,7 @@ export default function Title() {
   return (
     <div
       className="absolute"
+      aria-label="Useless Projects 3.0"
       style={{
         top: "287px",
         left: "50%",

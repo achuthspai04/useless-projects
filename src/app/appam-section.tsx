@@ -197,6 +197,7 @@ function TypedText({ text, entered }: { text: string; entered: boolean }) {
 function ProjectBoard({
   board,
   photo,
+  alt,
   left,
   top,
   scale = 1,
@@ -204,6 +205,7 @@ function ProjectBoard({
 }: {
   board: Board;
   photo: string;
+  alt: string;
   left: number;
   top: number;
   scale?: number;
@@ -240,7 +242,7 @@ function ProjectBoard({
         className="absolute overflow-hidden"
         style={{ left: 0, top: 0, width: `${board.width}px`, height: `${board.photoHeight}px` }}
       >
-        <img src={photo} alt="" className="absolute inset-0 size-full object-cover" />
+        <img src={photo} alt={alt} className="absolute inset-0 size-full object-cover" />
       </div>
     </div>
   );
@@ -366,6 +368,7 @@ export default function AppamSection() {
           key={board.stand}
           board={board}
           photo={PROJECT_PHOTOS[project % PROJECT_PHOTOS.length][slot]}
+          alt={`${PROJECTS[project % PROJECTS.length].english} — a Useless Projects showcase build by TinkerHub`}
           entrance={entrance}
           {...place(board)}
         />

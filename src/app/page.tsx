@@ -1,6 +1,7 @@
 import AnimatedElephant from "./animated-elephant";
 import AppamSection from "./appam-section";
 import CelebratingSection from "./celebrating-section";
+import { FAQ_ITEMS } from "./faq-data";
 import FaqSection from "./faq-section";
 import HeroDots from "./hero-dots";
 import HeroTagline from "./hero-tagline";
@@ -21,9 +22,37 @@ const ELE4_FRAMES = ["/ele4a.webp", "/ele4b.webp", "/ele4c.webp", "/ele4d.webp",
 const REF_WIDTH = 1920;
 const REF_HEIGHT = 1080;
 
+// TODO: venue and end time aren't published anywhere in the app yet (the countdown in
+// timer-section.tsx only carries a start time) - fill in `location` once confirmed, rather than
+// guessing. An Event schema with a wrong or missing venue can get flagged by Google's Rich
+// Results validator, so this is left out (not stubbed with placeholder text) until then.
+const EVENT_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "Event",
+  name: "Useless Projects 3.0",
+  description:
+    "An overnight make-a-thon by TinkerHub challenging Campus Community makers to build brilliantly impractical tech — software, hardware, or both.",
+  startDate: "2026-09-04T09:00:00+05:30",
+  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+  eventStatus: "https://schema.org/EventScheduled",
+  organizer: { "@type": "Organization", name: "TinkerHub", url: "https://tinkerhub.org" },
+};
+
+const FAQ_JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: { "@type": "Answer", text: item.answer },
+  })),
+};
+
 export default function Home() {
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(EVENT_JSON_LD) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }} />
       <MobileHero />
       <div className="relative hidden min-h-screen shrink-0 snap-start snap-always items-center justify-center overflow-hidden lg:flex">
         {/* Rendered before the canvas below (and so painted behind it) to match the Figma layer
