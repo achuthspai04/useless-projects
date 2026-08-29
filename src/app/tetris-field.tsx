@@ -304,6 +304,9 @@ export default function TetrisField({
   const [ele5, setEle5] = useState<CreatureState | null>(null);
   const ele3Ref = useRef<CreatureState | null>(null);
   const ele5Ref = useRef<CreatureState | null>(null);
+  // Lets the JSX below (outside the drop-loop effect) trigger the same destroy/respawn beat a
+  // landed block causes, so tapping a creature directly kills it too.
+  const killFnsRef = useRef<{ ele3: () => void; ele5: () => void } | null>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
   const particleIdRef = useRef(0);
 
@@ -427,21 +430,17 @@ export default function TetrisField({
       after(PARTICLE_LIFETIME_MS, () => setParticles((prev) => prev.filter((p) => !ids.has(p.id))));
     };
 
-    // A block landing in a creature's column always lands right at the creature's feet (the
-    // creature isn't part of the landing grid, so it never blocks anything) - which reads exactly
-    // like the block bonking it on the head. It's destroyed on the spot (see the JSX - it just
-    // stops rendering, no fade), then a beat later pops back into existence wherever the stack
-    // happens to be tallest right now.
-    const maybeKillCreature = (
+    // Destroys a creature on the spot (burst + stop rendering, no fade - see the JSX), then a
+    // beat later pops it back into existence wherever the stack is tallest right now. Shared by
+    // a block landing on it (maybeKillCreature below, e.g. bonked on the head) and a direct
+    // tap/click on it (see the JSX's onClick).
+    const killCreature = (
       creatureRef: typeof ele3Ref,
       setCreature: typeof setEle3,
-      otherRef: typeof ele3Ref,
-      blockCol: number,
-      blockCols: number
+      otherRef: typeof ele3Ref
     ) => {
       const c = creatureRef.current;
       if (!c || !c.alive) return;
-      if (c.col < blockCol || c.col >= blockCol + blockCols) return;
       burst(c.col, c.row, DEATH_PARTICLE_COLORS, 12);
       const dead = { ...c, alive: false };
       creatureRef.current = dead;
@@ -465,6 +464,24 @@ export default function TetrisField({
         creatureRef.current = respawned;
         setCreature(respawned);
       });
+    };
+
+    const maybeKillCreature = (
+      creatureRef: typeof ele3Ref,
+      setCreature: typeof setEle3,
+      otherRef: typeof ele3Ref,
+      blockCol: number,
+      blockCols: number
+    ) => {
+      const c = creatureRef.current;
+      if (!c || !c.alive) return;
+      if (c.col < blockCol || c.col >= blockCol + blockCols) return;
+      killCreature(creatureRef, setCreature, otherRef);
+    };
+
+    killFnsRef.current = {
+      ele3: () => killCreature(ele3Ref, setEle3, ele5Ref),
+      ele5: () => killCreature(ele5Ref, setEle5, ele3Ref),
     };
 
     const reset = () => {
@@ -744,6 +761,7 @@ export default function TetrisField({
       setEle3(null);
       setEle5(null);
       setParticles([]);
+      killFnsRef.current = null;
     };
   }, [columns, skyline, flooded]);
 
@@ -851,6 +869,8 @@ export default function TetrisField({
                 bottom: ele5.row * cell,
                 height: cell * 0.85 * creatureScale,
               }}
+              onClick={() => killFnsRef.current?.ele5()}
+              ariaLabel="Poke the pet"
             />
           )}
           {/* Frames have different intrinsic widths at a fixed height (a fire breath), so this one
@@ -869,6 +889,8 @@ export default function TetrisField({
                 bottom: ele3.row * cell,
                 height: cell * 0.9 * creatureScale,
               }}
+              onClick={() => killFnsRef.current?.ele3()}
+              ariaLabel="Poke the pet"
             />
           )}
         </>

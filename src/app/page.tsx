@@ -1,4 +1,3 @@
-import AnimatedElephant from "./animated-elephant";
 import AppamSection from "./appam-section";
 import CelebratingSection from "./celebrating-section";
 import { FAQ_ITEMS } from "./faq-data";
@@ -12,6 +11,7 @@ import SeeAllSection from "./see-all-section";
 import TimerSection from "./timer-section";
 import Title from "./title";
 import TetrisField from "./tetris-field";
+import VanishingElephant from "./vanishing-elephant";
 import WhySection from "./why-section";
 
 import FloatingPet from "./floating-pet";
@@ -76,7 +76,7 @@ export default function Home() {
               takes `left` as that center point rather than a box edge. Near-continuous frame loop
               (barely any idle pause between bursts) plus a slow autonomous up/down float (not
               mouse-driven, unlike the "3.0" badge's parallax). */}
-          <AnimatedElephant
+          <VanishingElephant
             frames={ELE4_FRAMES}
             frameIntervalMs={450}
             minDelayMs={50}

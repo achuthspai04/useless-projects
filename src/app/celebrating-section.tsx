@@ -22,6 +22,28 @@ const CELEBRATE_SCALE_STYLE = {
 
 const UNDERLINE_DURATION_S = 1.1;
 
+// Touching either pet makes it vanish briefly, mirroring the "destroy" beat the tetris-field
+// creatures already play when a block lands on them (see maybeKillCreature there).
+const PET_HIDE_MS = 550;
+
+// The green pet drifts slowly in place (animate-float-slow), so on touch it just reappears in
+// the same spot once the float animation resumes.
+const GREEN_POS = { left: 367, top: 226 };
+
+// The violet pet already has multiple pose variants sitting in public/ (ele5a..ele5e - the same
+// set FloatingPet/tetris-field cycle through automatically). Touching it here instead ties that
+// pose cycle to the click, and - since this one *is* animated (animate-float-slow) - "regenerates"
+// it at a different spot each time, same as a killed tetris creature respawning elsewhere. Spots
+// are hand-picked rather than fully random so it never lands on top of the headline text or the
+// green pet.
+const VIOLET_SPOTS = [
+  { left: 44, top: 93 },
+  { left: 420, top: 24 },
+  { left: 16, top: 318 },
+  { left: 24, top: 190 },
+] as const;
+const VIOLET_POSES = ["/ele5a.webp", "/ele5b.webp", "/ele5c.webp", "/ele5d.webp", "/ele5e.webp"] as const;
+
 // Built in real pixels (not a stretched viewBox) so the stroke stays a uniform width instead of
 // getting squashed/stretched unevenly - a fixed wavelength/amplitude reads closer to the
 // browser's native `text-decoration: wavy` than a viewBox scaled to fit the text box.
@@ -53,6 +75,30 @@ export default function CelebratingSection() {
   const [drawn, setDrawn] = useState(false);
   const [popped, setPopped] = useState(false);
   const [underlineWidth, setUnderlineWidth] = useState(0);
+  const [greenVisible, setGreenVisible] = useState(true);
+  const [violet, setVioletState] = useState<{ visible: boolean; pose: number; spot: number }>({
+    visible: true,
+    pose: 0,
+    spot: 0,
+  });
+
+  const handleGreenTouch = () => {
+    if (!greenVisible) return;
+    setGreenVisible(false);
+    setTimeout(() => setGreenVisible(true), PET_HIDE_MS);
+  };
+
+  const handleVioletTouch = () => {
+    if (!violet.visible) return;
+    setVioletState((prev) => ({ ...prev, visible: false }));
+    setTimeout(() => {
+      setVioletState((prev) => ({
+        visible: true,
+        pose: (prev.pose + 1) % VIOLET_POSES.length,
+        spot: (prev.spot + 1 + Math.floor(Math.random() * (VIOLET_SPOTS.length - 1))) % VIOLET_SPOTS.length,
+      }));
+    }, PET_HIDE_MS);
+  };
 
   useEffect(() => {
     const measure = () => {
@@ -177,18 +223,29 @@ export default function CelebratingSection() {
               </div>
             </div>
           </div>
-          <img
-            src="/creature-purple.svg"
-            alt=""
-            className="absolute h-[76.061px] w-[67px] animate-float-slow"
-            style={{ left: "44px", top: "93px" }}
-          />
-          <img
-            src="/creature-green.svg"
-            alt=""
-            className="absolute h-[95.964px] w-[59px]"
-            style={{ left: "367px", top: "226px" }}
-          />
+          {violet.visible && (
+            <button
+              type="button"
+              onClick={handleVioletTouch}
+              aria-label="Poke the violet pet"
+              key={`${violet.pose}-${violet.spot}`}
+              className="absolute h-[76.061px] w-[67px] animate-float-slow animate-lego-pop cursor-pointer border-0 bg-transparent p-0"
+              style={{ left: `${VIOLET_SPOTS[violet.spot].left}px`, top: `${VIOLET_SPOTS[violet.spot].top}px` }}
+            >
+              <img src={VIOLET_POSES[violet.pose]} alt="" className="size-full object-contain" />
+            </button>
+          )}
+          {greenVisible && (
+            <button
+              type="button"
+              onClick={handleGreenTouch}
+              aria-label="Poke the green pet"
+              className="absolute h-[95.964px] w-[59px] animate-float-slow animate-lego-pop cursor-pointer border-0 bg-transparent p-0"
+              style={{ left: `${GREEN_POS.left}px`, top: `${GREEN_POS.top}px` }}
+            >
+              <img src="/ele1.webp" alt="" className="size-full object-contain" />
+            </button>
+          )}
         </div>
       </div>
     </section>

@@ -1,4 +1,4 @@
-import Image from "next/image";
+import VanishingImage from "./vanishing-image";
 
 export default function ElephantBadge() {
   return (
@@ -6,7 +6,7 @@ export default function ElephantBadge() {
       <span className="font-jrk text-black" style={{ fontSize: "175.959px" }}>
         3.0
       </span>
-      <Image
+      <VanishingImage
         src="/ele1.webp"
         alt=""
         width={90}

@@ -1,10 +1,10 @@
-import Image from "next/image";
-import AnimatedElephant from "./animated-elephant";
 import HeroTagline from "./hero-tagline";
 import { HoverDot } from "./hover-dot";
 import RevealButton from "./reveal-button";
 import TetrisField from "./tetris-field";
 import TetrisHint from "./tetris-hint";
+import VanishingElephant from "./vanishing-elephant";
+import VanishingImage from "./vanishing-image";
 
 // ele4e.webp doesn't exist in public/ - the transition skips from d straight to f (same gap the
 // desktop hero works around).
@@ -44,7 +44,7 @@ export default function MobileHero() {
         <HoverDot assets={DOT_ASSETS} baseIndex={2} size={39.28} className="absolute" style={{ left: "13px", top: "565px" }} />
 
         {/* Standalone creature, top-left */}
-        <AnimatedElephant
+        <VanishingElephant
           frames={ELE4_FRAMES}
           frameIntervalMs={450}
           minDelayMs={50}
@@ -57,7 +57,7 @@ export default function MobileHero() {
         {/* 3.0 Badge positioned top-right relative to centered title. Floats with its perched
             creature, the same bob the desktop badge gets (see title.tsx). */}
         <div className="animate-float-slow absolute text-center" style={{ left: "352px", top: "231px", width: "76px" }}>
-          <Image
+          <VanishingImage
             src="/ele1.webp"
             alt=""
             width={36}

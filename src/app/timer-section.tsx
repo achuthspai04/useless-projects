@@ -1,8 +1,46 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import AnimatedElephant from "./animated-elephant";
 import CuriosityReveal from "./curiosity-reveal";
 import { HoverDot } from "./hover-dot";
+
+// The same fire-breathing creature (and frames) the hero's tetris field perches on the skyline
+// (see ELE3_FRAMES in tetris-field.tsx) - reused here at rest beside the reveal button instead of
+// standing on blocks. Its burst is mirrored onto the button's heat via onBurstChange below, so
+// the button visibly heats up with the fire and cools back down between bursts.
+const ELE3_FRAMES = ["/ele3a.webp", "/ele3b.webp", "/ele3c.webp", "/ele3d.webp"];
+
+// Real blackbody heating stages (cold iron -> dark red -> cherry red -> orange -> yellow-hot),
+// not a flat on/off color - each stop is [heat 0..1, [r,g,b]], interpolated between neighbours.
+const IRON_STOPS: [number, [number, number, number]][] = [
+  [0, [23, 21, 20]],
+  [0.35, [110, 24, 10]],
+  [0.6, [200, 68, 14]],
+  [0.8, [255, 128, 18]],
+  [1, [255, 191, 64]],
+];
+// AnimatedElephant's burst below is 3 fire frames + a return-to-idle frame, held FRAME_MS each,
+// plus one more FRAME_MS gap before it reports the burst done (see play() in animated-elephant.tsx)
+// - i.e. (3 + 1 + 1) * FRAME_MS. Matching IGNITE_MS to that exactly keeps the two in lockstep: the
+// button starts heating the instant the fire starts and hits full heat right as the dragon's mouth
+// closes, instead of drifting out of sync with however long the burst happens to run.
+const FRAME_MS = 550;
+const IGNITE_MS = FRAME_MS * 5;
+const COOL_MS = 4400;
+
+function ironColor(heat: number) {
+  const t = Math.min(1, Math.max(0, heat));
+  for (let i = 0; i < IRON_STOPS.length - 1; i++) {
+    const [t0, c0] = IRON_STOPS[i];
+    const [t1, c1] = IRON_STOPS[i + 1];
+    if (t <= t1) {
+      const localT = (t - t0) / (t1 - t0);
+      return c0.map((c, i2) => Math.round(c + (c1[i2] - c) * localT)) as [number, number, number];
+    }
+  }
+  return IRON_STOPS[IRON_STOPS.length - 1][1];
+}
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -42,6 +80,82 @@ const MOBILE_TARGET_CELL = 22;
 const CARDS_IN_MS = 320;
 const CARDS_HOLD_MS = 3000;
 
+// The button sits inside each breakpoint's own scaled canvas (mobile and desktop render both,
+// toggling visibility with CSS rather than mounting/unmounting - see TimerSection below), so each
+// needs its own dragon and its own isFiring/heat state. Sharing one state across both closures'
+// AnimatedElephant instances (as a plain top-taking function did before) let the CSS-hidden
+// breakpoint's independent, randomly-timed dragon flip the *visible* button's color out of sync
+// with the dragon actually on screen - hence a real component here, not a helper function.
+function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: boolean; onReveal: () => void }) {
+  const [isFiring, setIsFiring] = useState(false);
+  // 0 = cold iron, 1 = fully hot. Driven by a rAF ramp below rather than snapping straight to a
+  // fixed color, so the button visibly climbs through the same stages the dragon's fire would
+  // actually heat metal through, and eases back down just as gradually.
+  const [heat, setHeat] = useState(0);
+  const heatRef = useRef(0);
+
+  useEffect(() => {
+    const target = isFiring ? 1 : 0;
+    const duration = isFiring ? IGNITE_MS : COOL_MS;
+    const start = heatRef.current;
+    const startTime = performance.now();
+    let frame: number;
+
+    const step = (now: number) => {
+      const rawT = Math.min(1, (now - startTime) / duration);
+      // Igniting eases in (slow to catch, like the button itself needs a moment to start
+      // absorbing the breath); cooling eases out with a cubic tail (fast to stop climbing, then a
+      // long, slow fade back to cold) rather than the gentler quadratic ease, which read as done
+      // too soon for something meant to be radiating heat away.
+      const eased = isFiring ? rawT * rawT : 1 - Math.pow(1 - rawT, 3);
+      const value = start + (target - start) * eased;
+      heatRef.current = value;
+      setHeat(value);
+      if (rawT < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [isFiring]);
+
+  return (
+    <div
+      className={`absolute left-1/2 -translate-x-1/2 transition-opacity duration-200 ${
+        revealed ? "pointer-events-none opacity-0" : "opacity-100"
+      }`}
+      style={{ top: `${top}px`, width: "180px", height: "48px" }}
+    >
+      {/* Perches just left of the button, breathing fire at its own idle/burst rhythm - the
+          button's color is driven off the same burst via onBurstChange rather than re-timed
+          separately, so the two always heat up and cool down together. */}
+      <AnimatedElephant
+        frames={ELE3_FRAMES}
+        anchor="left"
+        frameIntervalMs={FRAME_MS}
+        repeatCount={1}
+        onBurstChange={setIsFiring}
+        style={{ right: "calc(100% + 54px)", bottom: 0, height: "48px" }}
+      />
+      <button
+        type="button"
+        onClick={onReveal}
+        className="font-nanum-pen relative flex size-full cursor-pointer items-center justify-center shadow-md transition-transform duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] active:translate-y-0.5 active:scale-[0.97] select-none"
+        style={{
+          fontSize: "24px",
+          // A continuous 3-stop blend rather than two matching stops butted against a third - that
+          // earlier version held one flat color out to a point and then cut hard to the next,
+          // which read as a vertical bar wiping across rather than the button itself heating up.
+          // This keeps the same idea (hottest where the dragon's breath lands, on the left) but as
+          // one smooth gradient the whole button visibly glows through, not a moving edge.
+          background: `linear-gradient(to right, rgb(${ironColor(heat).join(",")}) 0%, rgb(${ironColor(heat * 0.85).join(",")}) 55%, rgb(${ironColor(heat * 0.65).join(",")}) 100%)`,
+          color: heat > 0.55 ? "#241100" : "#ffffff",
+        }}
+      >
+        know when?
+      </button>
+    </div>
+  );
+}
+
 export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
   // a server-computed countdown against a client one computed moments later.
@@ -61,23 +175,6 @@ export default function TimerSection() {
       clearTimeout(toClose);
     };
   }, [revealed]);
-
-  // The button sits inside each breakpoint's scaled canvas so it tracks the design, while the
-  // reveal itself covers the whole section - hence one shared flag rather than local state. `top`
-  // is per-breakpoint because the countdown above it ends at a different height in each canvas
-  // (desktop: 310 + 130; mobile: 115 + two ~95px lines).
-  const curiosityButton = (top: number) => (
-    <button
-      type="button"
-      onClick={() => setRevealed(true)}
-      className={`font-nanum-pen absolute left-1/2 -translate-x-1/2 cursor-pointer items-center justify-center bg-black text-white shadow-md transition-all duration-200 ease-out hover:-translate-y-1 hover:scale-[1.04] hover:bg-[#1a1a1a] active:translate-y-0.5 active:scale-[0.97] select-none ${
-        revealed ? "pointer-events-none opacity-0" : "flex opacity-100"
-      }`}
-      style={{ top: `${top}px`, width: "180px", height: "48px", fontSize: "24px" }}
-    >
-      know when?
-    </button>
-  );
 
   useEffect(() => {
     setRemaining(remainingUntilEvent());
@@ -135,7 +232,7 @@ export default function TimerSection() {
           )}
         </p>
 
-        {curiosityButton(330)}
+        <CuriosityButton top={330} revealed={revealed} onReveal={() => setRevealed(true)} />
       </div>
 
       <div
@@ -178,7 +275,7 @@ export default function TimerSection() {
           {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
 
-        {curiosityButton(490)}
+        <CuriosityButton top={490} revealed={revealed} onReveal={() => setRevealed(true)} />
       </div>
 
       {/* Outside both scaled canvases so the board fills the real section rather than the design's
