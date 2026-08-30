@@ -134,7 +134,7 @@ export default function WhySection() {
           }}
         >
           <p className="font-nanum-pen text-center text-[19.69px] leading-[1.4] text-[#244638]">
-            Our movement is all about making — building random things, learning new skills, and expressing
+            Our movement is all about making: building random things, learning new skills, and expressing
             creativity and curiosity
           </p>
         </div>
@@ -220,7 +220,7 @@ export default function WhySection() {
             className="font-nanum-pen text-center text-[36px] leading-[1.4] text-[#244638]"
             style={{ width: "756px" }}
           >
-            Our movement is all about making — building random things, learning new skills, and expressing
+            Our movement is all about making: building random things, learning new skills, and expressing
             creativity and curiosity
           </p>
 

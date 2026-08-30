@@ -260,8 +260,13 @@ export default function FaqSection() {
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-    const measure = () =>
-      setPanels(Math.max(1, Math.ceil(el.getBoundingClientRect().height / window.innerHeight)));
+    const measure = () => {
+      // A mobile browser's address bar showing/hiding can report a transient window.innerHeight
+      // of 0, which would divide out to Infinity and crash the Array.from below - guard against
+      // that (and any other non-finite result) by falling back to the 1-panel floor.
+      const ratio = el.getBoundingClientRect().height / window.innerHeight;
+      setPanels(Number.isFinite(ratio) ? Math.max(1, Math.ceil(ratio)) : 1);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);

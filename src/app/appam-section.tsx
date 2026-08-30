@@ -99,7 +99,7 @@ const PROJECTS: Project[] = [
     linesMobile: ["malambambu"],
     malayalam: "മലമ്പാമ്പ്",
     quote:
-      "“മലമ്പാമ്പ് is a Malayalam programming language interpreter where “ഓ. എസ്” makes variables, “പറയൂ” prints, “പറയുക” loops, and “പാടിക്കൂ” gives tea breaks. Like Python, but it speaks Malayalam and enjoys snacks. Nobody asked for it — but we made it anyway!”",
+      "“മലമ്പാമ്പ് is a Malayalam programming language interpreter where “ഓ. എസ്” makes variables, “പറയൂ” prints, “പറയുക” loops, and “പാടിക്കൂ” gives tea breaks. Like Python, but it speaks Malayalam and enjoys snacks. Nobody asked for it, but we made it anyway!”",
     url: "https://noel9907.github.io/uslessss/",
   },
 ];
@@ -372,7 +372,7 @@ export default function AppamSection() {
           key={board.stand}
           board={board}
           photo={PROJECT_PHOTOS[project % PROJECT_PHOTOS.length][slot]}
-          alt={`${PROJECTS[project % PROJECTS.length].english} — a Useless Projects showcase build by TinkerHub`}
+          alt={`${PROJECTS[project % PROJECTS.length].english}, a Useless Projects showcase build by TinkerHub`}
           entrance={entrance}
           {...place(board)}
         />

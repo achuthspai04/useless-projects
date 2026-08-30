@@ -30,7 +30,7 @@ const EVENT_JSON_LD = {
   "@type": "EventSeries",
   name: "Useless Projects 3.0",
   description:
-    "An overnight make-a-thon by TinkerHub challenging Campus Community makers to build brilliantly impractical tech — software, hardware, or both. Runs as 18-hour sessions on Sep 3, 4, 5, 11, 12 and 13, 2026, across TinkerHub Campus Community venues in Kerala.",
+    "An overnight make-a-thon by TinkerHub challenging Campus Community makers to build brilliantly impractical tech (software, hardware, or both). Runs as 18-hour sessions on Sep 3, 4, 5, 11, 12 and 13, 2026, across TinkerHub Campus Community venues in Kerala.",
   startDate: "2026-09-03T09:00:00+05:30",
   endDate: "2026-09-14T03:00:00+05:30",
   location: "Multiple venues across TinkerHub Campus Communities in Kerala, India",

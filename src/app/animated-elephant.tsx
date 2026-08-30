@@ -165,6 +165,18 @@ export default function AnimatedElephant({
         .join(" ")}
       style={style}
       onClick={onClick}
+      // Fires the tap on touch-end directly rather than waiting for the browser's derived click
+      // event, which some mobile browsers delay or drop entirely if the touch is close enough to
+      // a nearby scroll/swipe gesture to register as one - preventDefault stops that click from
+      // then firing too and calling onClick a second time.
+      onTouchEnd={
+        onClick
+          ? (e) => {
+              e.preventDefault();
+              onClick();
+            }
+          : undefined
+      }
       role={onClick ? "button" : undefined}
       aria-label={onClick ? ariaLabel : undefined}
     >
