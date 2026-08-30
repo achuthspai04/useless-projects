@@ -22,17 +22,20 @@ const ELE4_FRAMES = ["/ele4a.webp", "/ele4b.webp", "/ele4c.webp", "/ele4d.webp",
 const REF_WIDTH = 1920;
 const REF_HEIGHT = 1080;
 
-// TODO: venue and end time aren't published anywhere in the app yet (the countdown in
-// timer-section.tsx only carries a start time) - fill in `location` once confirmed, rather than
-// guessing. An Event schema with a wrong or missing venue can get flagged by Google's Rich
-// Results validator, so this is left out (not stubbed with placeholder text) until then.
+// Runs as separate 18-hour sessions on Sep 3/4/5/11/12/13, at ~70 campus venues across Kerala
+// (not one continuous event at one venue) - marked up as an EventSeries rather than a plain
+// Event so the date range and location aren't overclaimed.
 const EVENT_JSON_LD = {
   "@context": "https://schema.org",
-  "@type": "Event",
+  "@type": "EventSeries",
   name: "Useless Projects 3.0",
   description:
-    "An overnight make-a-thon by TinkerHub challenging Campus Community makers to build brilliantly impractical tech — software, hardware, or both.",
-  startDate: "2026-09-04T09:00:00+05:30",
+    "An overnight make-a-thon by TinkerHub challenging Campus Community makers to build brilliantly impractical tech — software, hardware, or both. Runs as 18-hour sessions on Sep 3, 4, 5, 11, 12 and 13, 2026, across TinkerHub Campus Community venues in Kerala.",
+  startDate: "2026-09-03T09:00:00+05:30",
+  endDate: "2026-09-14T03:00:00+05:30",
+  location: "Multiple venues across TinkerHub Campus Communities in Kerala, India",
+  image: ["https://useless.tinkerhub.org/opengraph-image.png"],
+  offers: { "@type": "Offer", price: "0", priceCurrency: "INR", availability: "https://schema.org/InStock", url: "https://useless.tinkerhub.org" },
   eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   eventStatus: "https://schema.org/EventScheduled",
   organizer: { "@type": "Organization", name: "TinkerHub", url: "https://tinkerhub.org" },
