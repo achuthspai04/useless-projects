@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     template: "%s | Useless Projects 3.0",
   },
   description:
-    "Useless Projects 3.0 is TinkerHub's overnight make-a-thon — campus makers build brilliantly impractical tech, just for the joy of making. Exclusive to the TinkerHub Campus Community.",
+    "TinkerHub's overnight make-a-thon — campus makers build brilliantly impractical tech, just for the joy of making.",
   keywords: [
     "Useless Projects",
     "Useless Projects 3.0",
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Useless Projects 3.0 | TinkerHub",
     description:
-      "An overnight make-a-thon for the TinkerHub Campus Community — build something brilliantly impractical, just for the joy of making.",
+      "TinkerHub's overnight make-a-thon: build something brilliantly impractical, just for the joy of making.",
     url: "https://useless.tinkerhub.org",
     siteName: "Useless Projects",
     locale: "en_US",
