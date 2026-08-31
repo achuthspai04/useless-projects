@@ -59,9 +59,9 @@ const MOBILE_DOT_SIZE = 34.52;
 
 const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
-// Event kicks off 9 AM IST (UTC+5:30) on Sep 4 - the explicit offset pins the instant regardless
+// Event kicks off 5 PM IST (UTC+5:30) on Sep 3 - the explicit offset pins the instant regardless
 // of the visitor's own timezone, so the countdown is always correct against real IST.
-const EVENT_START = new Date("2026-09-04T09:00:00+05:30").getTime();
+const EVENT_START = new Date("2026-09-03T17:00:00+05:30").getTime();
 const UPDATE_INTERVAL_MS = 30_000;
 
 function remainingUntilEvent() {

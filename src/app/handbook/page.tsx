@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import InstagramEmbed from "./instagram-embed";
 
 export const metadata: Metadata = {
   title: "Handbook · Useless Projects",
@@ -17,6 +18,8 @@ type Block =
   | { kind: "links"; items: { label: string; href: string; text: string; tag?: string }[] }
   | { kind: "cards"; items: { tag?: string; title: string; text: string }[] }
   | { kind: "gallery"; items: { title: string; text: string; image?: string }[] }
+  | { kind: "embeds"; items: { title: string; permalink: string }[] }
+  | { kind: "video"; youtubeId: string; title: string }
   | { kind: "prizes"; items: { label: string; text?: string }[] };
 
 type Section = {
@@ -41,6 +44,11 @@ const SECTIONS: Section[] = [
       {
         kind: "text",
         text: "You will have a weekend, a team, and a room full of people building things nobody asked for. At the end of it you will have shipped something, which is more than most good ideas manage.",
+      },
+      {
+        kind: "video",
+        youtubeId: "Q59AWr_RRiA",
+        title: "why useless projects",
       },
       {
         kind: "note",
@@ -148,13 +156,11 @@ const SECTIONS: Section[] = [
     lead: "Stuck on an idea? Here's what past uselessness has looked like.",
     blocks: [
       {
-        kind: "gallery",
+        kind: "embeds",
         items: [
-          { title: "the angry keyboard", text: "Types slower the angrier you sound." },
-          { title: "the picky doorbell", text: "Only rings for people it likes." },
-          { title: "the corporate roundtrip", text: "Translates any sentence into jargon and back, losing meaning both ways." },
-          { title: "the noisy plant", text: "Live-tweets its own watering schedule, badly." },
-          { title: "the judgmental shoes", text: "Judge your walking posture out loud." },
+          { title: "the butterfly dress", permalink: "https://www.instagram.com/reel/DcFekwaB3Wo/" },
+          { title: "the portal", permalink: "https://www.instagram.com/reel/DccXPPzBWK9/" },
+          { title: "the LED street fighter", permalink: "https://www.instagram.com/reel/DbdWXCoBx6V/" },
         ],
       },
       {
@@ -163,7 +169,7 @@ const SECTIONS: Section[] = [
       },
       {
         kind: "note",
-        text: "Placeholder: swap these tiles for real photos from past editions once picked, and link a full gallery here.",
+        text: "Placeholder: link a full gallery of past builds here once one exists.",
       },
     ],
   },
@@ -423,6 +429,39 @@ function Blocks({ blocks }: { blocks: Block[] }) {
                     </span>
                     <span className="font-helvetica text-[15px] leading-[1.6] text-[#33322f]">{item.text}</span>
                   </div>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+
+        if (block.kind === "video") {
+          return (
+            <div key={i} className="max-w-[68ch] overflow-hidden rounded-2xl border border-black/5 shadow-xs">
+              <div className="relative aspect-video w-full bg-black">
+                <iframe
+                  src={`https://www.youtube.com/embed/${block.youtubeId}`}
+                  title={block.title}
+                  className="absolute inset-0 size-full"
+                  frameBorder={0}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                />
+              </div>
+            </div>
+          );
+        }
+
+        if (block.kind === "embeds") {
+          return (
+            <ul key={i} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {block.items.map((item) => (
+                <li key={item.permalink} className="flex flex-col items-center gap-2">
+                  <span className="font-nanum-pen self-start text-[19px] leading-[1.2] text-[#0e0e0d] sm:text-[21px]">
+                    {item.title}
+                  </span>
+                  <InstagramEmbed permalink={item.permalink} />
                 </li>
               ))}
             </ul>

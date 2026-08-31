@@ -1,8 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { HoverDot } from "./hover-dot";
+
+const WHY_VIDEO_YOUTUBE_ID = "Q59AWr_RRiA";
 
 const REF_WIDTH = 1280;
 const REF_HEIGHT = 832;
@@ -27,8 +28,13 @@ const MOBILE_TEXT_TOP_PX = 113;
 const MOBILE_VIDEO_TOP_PX = MOBILE_TEXT_TOP_PX + 162;
 
 const ARROW_DRAW_DURATION_S = 0.9;
-const VIDEO_WIDTH_PX = 413.915;
-const VIDEO_HEIGHT_PX = 233.006;
+// Bumped ~25% over the Figma spec (413.915 x 233.006) at the user's request, kept at 16:9.
+const VIDEO_WIDTH_PX = 520;
+const VIDEO_HEIGHT_PX = 292.5;
+// rel=0/modestbranding=1 strip the end-of-video suggestions and the YouTube watermark;
+// iv_load_policy=3 drops annotations; the youtube-nocookie host also skips the share/"watch on
+// YouTube" overlay that the plain youtube.com embed shows on the paused thumbnail.
+const WHY_VIDEO_EMBED_SRC = `https://www.youtube-nocookie.com/embed/${WHY_VIDEO_YOUTUBE_ID}?rel=0&modestbranding=1&iv_load_policy=3`;
 // Figma has the arrow's left edge 202px left of the video's left edge, both top-aligned
 // (arrow left 216 vs video left 418, both top 468.548) - kept relative to the video here so the
 // pair can move together as one flex item instead of both needing independent absolute offsets.
@@ -41,6 +47,49 @@ const UNDERLINE_AMPLITUDE = 4;
 const UNDERLINE_WAVELENGTH = 24;
 const UNDERLINE_BASELINE = 6;
 const UNDERLINE_HEIGHT = 12;
+
+// A click-to-play facade instead of an always-live iframe: YouTube's paused-embed cover shows a
+// title bar, a share icon and a "Watch on YouTube" link that no embed parameter can suppress -
+// swapping in the real iframe (with autoplay) only once someone actually clicks avoids all of it,
+// as a bonus this also means the section doesn't load YouTube's player JS until requested.
+function WhyVideoFacade() {
+  const [playing, setPlaying] = useState(false);
+
+  if (playing) {
+    return (
+      <iframe
+        src={`${WHY_VIDEO_EMBED_SRC}&autoplay=1`}
+        title="why useless projects"
+        className="absolute inset-0 size-full"
+        frameBorder={0}
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerPolicy="strict-origin-when-cross-origin"
+        allowFullScreen
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setPlaying(true)}
+      aria-label="Play video: why useless projects"
+      className="group absolute inset-0 flex size-full items-center justify-center"
+    >
+      <img
+        src={`https://img.youtube.com/vi/${WHY_VIDEO_YOUTUBE_ID}/hqdefault.jpg`}
+        alt=""
+        className="absolute inset-0 size-full object-cover"
+      />
+      <span className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/10" />
+      <span className="relative flex size-14 items-center justify-center rounded-full bg-[#ea34df] shadow-lg transition-transform group-hover:scale-110">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="#fff" aria-hidden="true">
+          <path d="M8 5v14l11-7z" />
+        </svg>
+      </span>
+    </button>
+  );
+}
 
 function buildSquigglePath(width: number) {
   if (width <= 0) return "";
@@ -139,11 +188,8 @@ export default function WhySection() {
           </p>
         </div>
 
-        {/* holderyt.webp is the already-flattened still: the 35% dimming pass and the frosted
-            "coming soon" chip that sit as separate layers in the Figma frame are baked into it,
-            so re-adding them here would double both. Same asset the desktop block uses. */}
         <div
-          className="absolute overflow-hidden bg-[#d2800f]"
+          className="absolute overflow-hidden bg-black"
           style={{
             left: "6.121px",
             top: `${MOBILE_VIDEO_TOP_PX}px`,
@@ -152,13 +198,7 @@ export default function WhySection() {
             borderRadius: "4.799px",
           }}
         >
-          <Image
-            src="/holderyt.webp"
-            alt="Coming soon"
-            fill
-            sizes="335px"
-            className="object-cover object-center"
-          />
+          <WhyVideoFacade />
         </div>
       </div>
 
@@ -243,14 +283,8 @@ export default function WhySection() {
               }}
             />
 
-            <div className="absolute inset-0 overflow-hidden rounded-[5.934px] bg-[#d2800f]">
-              <Image
-                src="/holderyt.webp"
-                alt="Coming soon"
-                fill
-                sizes={`${Math.ceil(VIDEO_WIDTH_PX)}px`}
-                className="object-cover object-center"
-              />
+            <div className="absolute inset-0 overflow-hidden rounded-[5.934px] bg-black">
+              <WhyVideoFacade />
             </div>
           </div>
         </div>
