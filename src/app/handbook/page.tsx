@@ -1,10 +1,34 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import InstagramEmbed from "./instagram-embed";
+import HoverFrames from "./hover-frames";
+import LegoBlock, { CELL, LEGO_SHAPES, shapeWidth, shapeHeight, type LegoColor, type LegoShapeName } from "../lego-block";
+import { HoverDot } from "../hover-dot";
+
+// Same brick colors the tetris field drops, minus cream (too low-contrast on white here). Cycled
+// by index so studs/bullets read as a deliberate little rainbow rather than one flat accent color.
+const STUD_COLORS: LegoColor[] = ["magenta", "cyan", "green", "orange", "purple", "red"];
+// The five actual tetromino pieces (not the bare single-cell "stud") - multi-block shapes so a
+// step marker reads as a little built thing, not just a colored dot.
+const STEP_SHAPES: LegoShapeName[] = ["ess", "brick", "line", "square", "tee"];
+// Same palette the hero's corner dots use, reused here rather than minting new assets - the
+// "breathing" circle badge from the homepage.
+const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
+
+// Sizes a shape by cell size, not by a fixed bounding-box height. The five step shapes have
+// different row/col counts (line is 1x3, ess/brick are 3x2), so stretching every shape to the
+// same height would scale their individual cells inconsistently - a 3-row shape's studs would
+// end up visibly smaller than a 1-row shape's. Holding cellPx constant instead means a stud is
+// the same physical size in every shape; only the overall footprint varies, which is correct.
+function legoStyle(shape: LegoShapeName, cellPx: number): React.CSSProperties {
+  const { rows } = LEGO_SHAPES[shape];
+  const scale = cellPx / CELL;
+  return { width: shapeWidth(rows) * scale, height: shapeHeight(rows) * scale };
+}
 
 export const metadata: Metadata = {
   title: "Handbook · Useless Projects",
-  description: "Rules, how to participate, and everything else worth knowing before you build something useless.",
+  description: "Rules, how to participate, and everything else worth knowing before you build something you actually want to make.",
 };
 
 // PLACEHOLDER COPY. The structure below is the point - every string here is sample text meant to
@@ -12,15 +36,17 @@ export const metadata: Metadata = {
 // or reordering one is a data edit; nothing in the layout is keyed to a particular section.
 type Block =
   | { kind: "text"; text: string }
+  | { kind: "subheading"; text: string }
   | { kind: "list"; items: string[] }
-  | { kind: "steps"; items: { title: string; text: string }[] }
+  | { kind: "steps"; items: { title: string; text: string; href?: string; linkLabel?: string }[] }
   | { kind: "note"; text: string }
   | { kind: "links"; items: { label: string; href: string; text: string; tag?: string }[] }
   | { kind: "cards"; items: { tag?: string; title: string; text: string }[] }
   | { kind: "gallery"; items: { title: string; text: string; image?: string }[] }
   | { kind: "embeds"; items: { title: string; permalink: string }[] }
   | { kind: "video"; youtubeId: string; title: string }
-  | { kind: "prizes"; items: { label: string; text?: string }[] };
+  | { kind: "prizes"; items: { label: string; text?: string; locked?: boolean }[]; size?: "sm" | "lg" }
+  | { kind: "creatures"; items: { label: string; image: string; hoverFrames?: string[] }[] };
 
 type Section = {
   id: string;
@@ -35,16 +61,8 @@ const SECTIONS: Section[] = [
     id: "readme",
     nav: "readme",
     title: "start here",
-    lead: "Useless Projects is a build sprint with exactly one rule about outcomes: it must not be useful.",
+    lead: "Useless Projects is a build sprint about making something purely because you want to, not because it solves anything.",
     blocks: [
-      {
-        kind: "text",
-        text: "Every other hackathon asks what problem you are solving. This one asks what you have always wanted to make and never had an excuse for. Bring the idea that makes people laugh before it makes them nod.",
-      },
-      {
-        kind: "text",
-        text: "You will have a weekend, a team, and a room full of people building things nobody asked for. At the end of it you will have shipped something, which is more than most good ideas manage.",
-      },
       {
         kind: "video",
         youtubeId: "Q59AWr_RRiA",
@@ -52,7 +70,7 @@ const SECTIONS: Section[] = [
       },
       {
         kind: "note",
-        text: "New here? Read this page top to bottom once. It takes about four minutes and covers everything you need on the day.",
+        text: "New here? Read this page top to bottom once. It covers everything you need before and during the hackathon.",
       },
     ],
   },
@@ -60,32 +78,202 @@ const SECTIONS: Section[] = [
     id: "participate",
     nav: "how to join",
     title: "how to participate",
-    lead: "Four steps, none of which involve a pitch deck.",
+    lead: "Registration is a single application, open to any student from a TinkerHub campus.",
     blocks: [
       {
         kind: "steps",
         items: [
           {
-            title: "Register your team",
-            text: "Teams are two to four people. Solo entries are allowed but you will have more fun with company. One person registers on behalf of everyone.",
+            title: "Apply on the hub app",
+            text: "Registration is through useless.tinkerhub.org, which opens the TinkerHub hub app. Any student from a TinkerHub campus can apply.",
+            href: "https://www.instagram.com/p/DMctgGIvWaN/",
+            linkLabel: "guide: how to register for Useless Projects",
           },
           {
-            title: "Bring an idea, not a plan",
-            text: "You do not need to know how to build it when you arrive. A single sentence describing the useless thing is enough to get started.",
+            title: "Prepare before the day",
+            text: "Once accepted, start thinking through and preparing your project idea so you arrive at the venue ready to build.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "ideas",
+    nav: "what to build",
+    title: "what kind of ideas to build",
+    lead: "Not “what problem are you solving”, but “what have you always wanted to make.”",
+    blocks: [
+      {
+        kind: "text",
+        text: "Bring the idea you have always wanted to make and never had an excuse for, not a problem to solve. Small, working, and funny before it is clever beats big, half-built, and impressive on paper.",
+      },
+      {
+        kind: "embeds",
+        items: [
+          { title: "the butterfly dress", permalink: "https://www.instagram.com/reel/DcFekwaB3Wo/" },
+          { title: "the portal", permalink: "https://www.instagram.com/reel/DccXPPzBWK9/" },
+          { title: "the LED street fighter", permalink: "https://www.instagram.com/reel/DbdWXCoBx6V/" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "during",
+    nav: "during the hackathon",
+    title: "to get started",
+    lead: "No fixed minute-by-minute schedule. Venue-wise programs run their own version of the day.",
+    blocks: [
+      {
+        kind: "text",
+        text: "Each venue runs its own program on the day; there's no single national schedule. Your venue host will walk you through timings, meals, and format when you arrive.",
+      },
+      {
+        kind: "steps",
+        items: [
+          {
+            title: "Fork and clone the starter repo",
+            text: "Here's the repo you'll build on top of.",
+            href: "https://github.com/tinkerhub/useless_project_temp",
+            linkLabel: "github.com/tinkerhub/useless_project_temp",
+          },
+        ],
+      },
+      {
+        kind: "gallery",
+        items: [
+          { title: "1. fork it", text: "Hit Fork to copy it to your own account.", image: "/handbook/fork-guide.png" },
+          { title: "2. clone it", text: "Hit Code, copy the HTTPS URL, and clone it locally.", image: "/handbook/clone-guide.png" },
+        ],
+      },
+      {
+        kind: "steps",
+        items: [
+          {
+            title: "Build your journal alongside your project",
+            text: "Keep a journal documenting your process as you build. It lives on a separate branch of the same repo, not in the project code itself. Pushing to that branch auto-deploys it to your GitHub Pages, so your build log is live as you go, not written up after the fact.",
           },
           {
-            title: "Build on the day",
-            text: "Work begins when the clock starts and not before. Anything you bring must be a component, not a head start.",
-          },
-          {
-            title: "Show it working",
-            text: "Demos are three minutes. It has to run, at least once, in front of people. Slides are not a substitute for a thing that moves.",
+            title: "Keep an updated README",
+            text: "Keep an updated README and a well-documented repo, including the GitHub Pages link for your journal, so judges and other participants can find it.",
           },
         ],
       },
       {
         kind: "note",
-        text: "Placeholder: registration link, deadline, and campus eligibility go here once confirmed.",
+        text: "Enjoy the process of making. Be kind, help the people stuck next to you, learn out loud, share what you know, and build.",
+      },
+    ],
+  },
+  {
+    id: "help",
+    nav: "getting help",
+    title: "who to talk to",
+    lead: "Help comes from two rings: the room you're in, and the wider TinkerHub community.",
+    blocks: [
+      {
+        kind: "text",
+        text: "Who's a mentor? Could be someone wearing a mentor badge, or it could just be the person sitting next to you. There is no such thing as a question too small; half of them will be about a cable.",
+      },
+      {
+        kind: "creatures",
+        items: [
+          { label: "Your venue itself", image: "/ele1.webp" },
+          {
+            label: "The larger TinkerHub community",
+            image: "/ele3a.webp",
+            hoverFrames: ["/ele3a.webp", "/ele3b.webp", "/ele3c.webp"],
+          },
+          { label: "Campus team", image: "/ele4.webp" },
+          { label: "Foundation team", image: "/ele5a.webp" },
+        ],
+      },
+    ],
+  },
+  {
+    id: "submit",
+    nav: "submission",
+    title: "how to submit and get judged",
+    lead: "Submission happens in the same app you applied through.",
+    blocks: [
+      {
+        kind: "steps",
+        items: [
+          {
+            title: "Submit in the hub app",
+            text: "Same app you used to apply. Update your README properly. If it's software, deploy it: a live link and a GitHub repo are needed. If it's hardware, an updated README with diagrams, photos, and videos is needed.",
+            href: "https://www.instagram.com/p/DMxhr0-vUj7/",
+            linkLabel: "guide: how to submit your project in the Hub app",
+          },
+          {
+            title: "Venue-wise validated projects present",
+            text: "Your venue host reviews and validates submissions, then validated projects present at the venue.",
+          },
+          {
+            title: "Community voting",
+            text: "After presentations, voting is opened to the community.",
+          },
+          {
+            title: "Venue-wise best projects shown",
+            text: "Once voting closes, the best projects at each venue are shown. There's no prize distribution at the venue itself.",
+          },
+          {
+            title: "Foundation announces final results",
+            text: "A few weeks after the hackathon, the Foundation reviews the venue-wise best projects and announces the final results.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "prizes",
+    nav: "prizes",
+    title: "prizes",
+    lead: "There is no scoring rubric worth defending, so here is roughly what impresses us, and what happens if it impresses us enough.",
+    blocks: [
+      {
+        kind: "subheading",
+        text: "main quests",
+      },
+      {
+        kind: "text",
+        text: "Hit these and you're in line for a real prize.",
+      },
+      {
+        kind: "prizes",
+        size: "lg",
+        items: [
+          { label: "top 25 makers", text: "The 25 highest-scoring makers get a monthly scholarship worth up to ₹5 lakh." },
+          { label: "top 50 projects", text: "The 50 highest-scoring projects get a showcase slot at Make Fair Kerala." },
+          { label: "goodies bag", text: "Selected participants take home a goodies bag." },
+          { label: "mentorship", text: "Selected participants get mentorship from industry experts." },
+          { label: "learning access", text: "Selected participants get access to exclusive learning programs." },
+        ],
+      },
+      {
+        kind: "subheading",
+        text: "side quests",
+      },
+      {
+        kind: "text",
+        text: "Smaller extras for specific things done well.",
+      },
+      {
+        kind: "prizes",
+        size: "sm",
+        items: [
+          { label: "best build video documentary" },
+          { label: "", locked: true },
+          { label: "", locked: true },
+        ],
+      },
+      {
+        kind: "list",
+        items: [
+          "Commitment to the bit. A fully realised silly idea beats a half-built clever one.",
+          "It works. Or it fails in an entertaining and clearly deliberate way.",
+          "Craft. Whatever you're making, make it well.",
+          "The demo. Well spent, in front of a room that wants you to succeed.",
+        ],
       },
     ],
   },
@@ -98,11 +286,8 @@ const SECTIONS: Section[] = [
       {
         kind: "list",
         items: [
-          "It must be useless. If someone can describe a genuine use case without laughing, reconsider.",
-          "Build during the event. Existing libraries, frameworks and hardware modules are fine; existing projects are not.",
-          "Everything you use must be something you are allowed to use: licences, APIs, other people's work, all of it.",
-          "AI tools are allowed and you should say so in your README. Nobody loses points for it.",
-          "Hardware is welcome. So is anything that plugs into a wall, provided it does not set off the smoke alarm.",
+          "Build during the event.",
+          "Building with AI is welcome, as long as you learn and have fun.",
           "Be decent to each other. The code of conduct applies to the whole event, online and off.",
         ],
       },
@@ -113,178 +298,33 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "submit",
-    nav: "submit",
-    title: "how to submit your project",
-    lead: "Submission is a form and a working demo, not a pitch deck.",
-    blocks: [
-      {
-        kind: "cards",
-        items: [
-          {
-            tag: "form",
-            title: "Fill in the submission form",
-            text: "One submission per team, before the freeze. It asks for your team name, a one-line description of the useless thing, and a link to your repo.",
-          },
-          {
-            tag: "docs",
-            title: "Write a README",
-            text: "What it does, how to run it, and who was on the team. Say if you used AI tools; that's a rule, not a suggestion, and it costs you nothing.",
-          },
-          {
-            tag: "extras",
-            title: "Link anything that isn't code",
-            text: "Hardware builds, physical props, or anything that can't live in a repo should get a photo or short clip linked from the README.",
-          },
-          {
-            tag: "demo",
-            title: "Be ready to demo live",
-            text: "Submission gets you on the schedule. The build still has to run in front of the judges; a submitted link with a broken demo doesn't place.",
-          },
-        ],
-      },
-      {
-        kind: "note",
-        text: "Placeholder: submission form link and the exact freeze time go here once confirmed.",
-      },
-    ],
-  },
-  {
-    id: "inspiration",
-    nav: "inspiration",
-    title: "projects to inspire you",
-    lead: "Stuck on an idea? Here's what past uselessness has looked like.",
-    blocks: [
-      {
-        kind: "embeds",
-        items: [
-          { title: "the butterfly dress", permalink: "https://www.instagram.com/reel/DcFekwaB3Wo/" },
-          { title: "the portal", permalink: "https://www.instagram.com/reel/DccXPPzBWK9/" },
-          { title: "the LED street fighter", permalink: "https://www.instagram.com/reel/DbdWXCoBx6V/" },
-        ],
-      },
-      {
-        kind: "text",
-        text: "None of these are up for grabs; the point isn't to copy the bit, it's to see the shape of a good one. Small, working, and clearly not trying to solve anything.",
-      },
-      {
-        kind: "note",
-        text: "Placeholder: link a full gallery of past builds here once one exists.",
-      },
-    ],
-  },
-  {
-    id: "schedule",
-    nav: "schedule",
-    title: "how the weekend runs",
-    lead: "Sample timings. Treat the shape as real and the hours as provisional.",
-    blocks: [
-      {
-        kind: "steps",
-        items: [
-          { title: "Friday evening", text: "Doors, team forming, and the opening briefing. Ideas get pinned to the wall." },
-          { title: "Saturday", text: "The long build. Mentors float around all day. Food happens at some point." },
-          { title: "Sunday morning", text: "Freeze, then demos. Three minutes each, running order drawn at random." },
-          { title: "Sunday afternoon", text: "Awards, photographs, and the traditional argument about which entry was least useful." },
-        ],
-      },
-    ],
-  },
-  {
-    id: "judging",
-    nav: "evaluation & prizes",
-    title: "evaluation, prizes, and how to claim them",
-    lead: "There is no scoring rubric worth defending, so here is roughly what impresses us, and what happens if it impresses us enough.",
-    blocks: [
-      {
-        kind: "list",
-        items: [
-          "Commitment to the bit. A fully realised silly idea beats a half-built clever one.",
-          "It works. Or it fails in an entertaining and clearly deliberate way.",
-          "Craft. Uselessness is not an excuse for a bad build.",
-          "The demo. Three minutes, well spent, in front of a room that wants you to succeed.",
-        ],
-      },
-      {
-        kind: "prizes",
-        items: [
-          { label: "grand prize", text: "Most useless, best executed." },
-          { label: "judges' pick", text: "The one the judges couldn't stop talking about." },
-          { label: "crowd favourite", text: "Voted on by everyone in the room." },
-          { label: "best build", text: "Real craft, useless or not." },
-        ],
-      },
-      {
-        kind: "note",
-        text: "Placeholder: final prize names and the judging panel to be confirmed; badges above are illustrative.",
-      },
-      {
-        kind: "cards",
-        items: [
-          {
-            tag: "announce",
-            title: "Winners are announced at awards",
-            text: "Straight after demos, on the schedule above. You need to be in the room; prizes aren't couriered after the fact.",
-          },
-          {
-            tag: "collect",
-            title: "One team member collects, on behalf of the team",
-            text: "Bring the ID you registered with. Splitting a prize between teammates afterwards is on you, not on us.",
-          },
-          {
-            tag: "sign off",
-            title: "Sign for it before you leave",
-            text: "Unclaimed prizes are held with the campus team for a short window after the event, then they're reallocated.",
-          },
-        ],
-      },
-      {
-        kind: "note",
-        text: "Placeholder: exact claim window and how to collect if you can't be there in person, to be confirmed.",
-      },
-    ],
-  },
-  {
     id: "resources",
     nav: "resources",
-    title: "policies & good practice",
-    lead: "The rules above are the short version. The full text lives elsewhere; read it once, it's not long.",
+    title: "the fine print, shelved",
+    lead: "We're a free community, but a free community still runs on ground rules. Here's where ours live.",
     blocks: [
       {
         kind: "links",
         items: [
-          { tag: "conduct", label: "Code of conduct", href: "#", text: "How we expect everyone (participants, mentors, organisers) to treat each other, on site and online." },
-          { tag: "privacy", label: "Privacy policy", href: "#", text: "What we collect when you register, and what we do with it." },
-          { tag: "practice", label: "Best practices", href: "#", text: "Guidance on licensing, attribution, and using AI tools honestly in your submission." },
+          {
+            tag: "the shelf",
+            label: "TinkerHub Shelf",
+            href: "https://tinkerhub.gitbook.io/th-shelf",
+            text: "Code of conduct, privacy policy, and terms, all shelved in one place instead of scattered across three PDFs nobody opens. Skim it for the jokes, stay for the part that actually governs the event.",
+          },
         ],
       },
     ],
   },
   {
-    id: "help",
-    nav: "contact points",
-    title: "who to talk to",
-    lead: "Ask early. Everyone here has been stuck on something dumber.",
+    id: "emergency",
+    nav: "venue & emergencies",
+    title: "venue issues and emergencies",
+    lead: "Anything about the venue, or any emergency, goes to the host or the organisers, not to us after the fact.",
     blocks: [
       {
         kind: "text",
-        text: "Mentors wear a different colour lanyard and are on the floor all weekend. There is no such thing as a question too small; half of them will be about a cable.",
-      },
-      {
-        kind: "text",
-        text: "For anything before the event, or anything you would rather ask quietly, mail the campus team and someone will get back to you.",
-      },
-      {
-        kind: "cards",
-        items: [
-          { tag: "general", title: "Campus team", text: "General questions, before or during the event." },
-          { tag: "your campus", title: "Campus lead", text: "Registration, eligibility, and local logistics specific to your campus." },
-          { tag: "escalation", title: "Foundation team", text: "Anything about the event overall, or if your campus lead is unreachable." },
-        ],
-      },
-      {
-        kind: "note",
-        text: "A note on venue issues: the venue and its facilities (power, seating, wifi, food, air conditioning) are the venue's responsibility, not the organisers'. Flag a venue problem to your on-site point of contact and it'll get relayed, but we don't control the building.",
+        text: "Any venue problem (power, seating, wifi, food, safety) or emergency during the event should be reported immediately to your on-site host or the organising team. The venue and host are the point of contact for anything happening live on-site.",
       },
     ],
   },
@@ -321,28 +361,55 @@ const SEAL_PATH = buildSealPath(50, 42, 42, 36, 12);
 
 // The actual "badge" the user meant: a collectible medal, one per prize, not a UI chip. Ribbon
 // tails sit behind the seal so the seal's bottom scallops read as pinned on top of them.
-function PrizeMedal({ label, text }: { label: string; text?: string }) {
+function PrizeMedal({
+  label,
+  text,
+  size = "lg",
+  locked = false,
+}: {
+  label: string;
+  text?: string;
+  size?: "sm" | "lg";
+  locked?: boolean;
+}) {
+  const svgSize = size === "lg" ? 112 : 76;
+  const boxWidth = size === "lg" ? 140 : 100;
   return (
-    <li className="flex flex-col items-center gap-2 text-center" style={{ width: "140px" }}>
-      <svg viewBox="0 0 100 108" width="112" height="121" aria-hidden="true">
-        <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
-        <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
-        <path d={SEAL_PATH} fill="#ea34df" />
-        <circle cx="50" cy="42" r="28" fill="#fff" />
-        <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
-        <text
-          x="50"
-          y="53"
-          textAnchor="middle"
-          fontSize="30"
-          fill="#ea34df"
-          style={{ fontFamily: "var(--font-drowner)" }}
-        >
-          ★
-        </text>
-      </svg>
-      <span className="font-nanum-pen text-[20px] leading-[1.1] text-[#0e0e0d]">{label}</span>
-      {text && <span className="font-helvetica text-[13px] leading-[1.4] text-[#33322f]">{text}</span>}
+    <li className="relative flex flex-col items-center gap-2 text-center" style={{ width: `${boxWidth}px` }}>
+      <div className={locked ? "flex flex-col items-center gap-2 blur-[3px] opacity-40 select-none" : "flex flex-col items-center gap-2"}>
+        <svg viewBox="0 0 100 108" width={svgSize} height={svgSize * 1.08} aria-hidden="true">
+          <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
+          <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
+          <path d={SEAL_PATH} fill="#ea34df" />
+          <circle cx="50" cy="42" r="28" fill="#fff" />
+          <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
+          <text
+            x="50"
+            y="53"
+            textAnchor="middle"
+            fontSize="30"
+            fill="#ea34df"
+            style={{ fontFamily: "var(--font-drowner)" }}
+          >
+            ★
+          </text>
+        </svg>
+        <span className={`font-nanum-pen leading-[1.1] text-[#0e0e0d] ${size === "lg" ? "text-[20px]" : "text-[15px]"}`}>
+          {label}
+        </span>
+        {text && (
+          <span
+            className={`font-helvetica leading-[1.4] text-[#33322f] ${size === "lg" ? "text-[13px]" : "text-[11px]"}`}
+          >
+            {text}
+          </span>
+        )}
+      </div>
+      {locked && (
+        <span className="font-helvetica absolute inset-0 flex items-center justify-center text-[11px] tracking-[0.08em] text-[#33322f] uppercase">
+          to be unlocked
+        </span>
+      )}
     </li>
   );
 }
@@ -375,54 +442,127 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           );
         }
 
+        if (block.kind === "subheading") {
+          return (
+            <h3 key={i} className="font-drowner mt-2 leading-[1] text-[#0e0e0d]" style={{ fontSize: "clamp(24px, 3.5vw, 32px)" }}>
+              {block.text}
+            </h3>
+          );
+        }
+
         if (block.kind === "prizes") {
           return (
             <ul key={i} className="flex flex-wrap justify-center gap-x-6 gap-y-8 py-2 sm:justify-start">
-              {block.items.map((item) => (
-                <PrizeMedal key={item.label} label={item.label} text={item.text} />
+              {block.items.map((item, itemIndex) => (
+                <PrizeMedal key={`${item.label}-${itemIndex}`} label={item.label} text={item.text} size={block.size} locked={item.locked} />
               ))}
             </ul>
           );
         }
 
-        if (block.kind === "cards") {
+        if (block.kind === "creatures") {
+          // 1st and 4th sit at the back on the same plane; 3rd steps in front of them; 2nd steps
+          // in front of that - a specific front-to-back order, not just left-to-right stacking.
+          // Each step forward also grows a little and drops a little lower, like it's standing
+          // closer to the camera rather than just being drawn on top.
+          const CROWD_Z = [1, 3, 2, 1];
+          const CROWD_FRONT_CLASS = ["", "translate-y-2 scale-110", "translate-y-1 scale-105", ""];
           return (
-            <ol key={i} className="grid gap-4 sm:grid-cols-2">
-              {block.items.map((card, cardIndex) => (
-                <li key={card.title} className={`flex flex-col gap-2 ${CARD_CLASS}`}>
-                  <span className="flex items-center gap-2">
-                    <span className="font-helvetica flex size-6 shrink-0 items-center justify-center rounded-full bg-[#ea34df] text-[11px] text-white tabular-nums">
-                      {String(cardIndex + 1).padStart(2, "0")}
+            // A crowd, not a grid: each one overlaps the last, sitting still until you hover -
+            // then it steps in front, grows, and names itself, the way a huddled group would
+            // when you single one out. Extra left padding beyond the plain container gap nudges
+            // the whole huddle right, since the overlap otherwise reads as pulled to the left edge.
+            <ul key={i} className="flex items-center justify-center py-4 sm:justify-start sm:pl-32">
+              {block.items.map((item, itemIndex) => {
+                return (
+                  <li
+                    key={item.label}
+                    className={`group relative -ml-4 transition-transform duration-200 first:ml-0 hover:z-10 hover:scale-125 ${CROWD_FRONT_CLASS[itemIndex] ?? ""}`}
+                    style={{ zIndex: CROWD_Z[itemIndex] ?? itemIndex }}
+                  >
+                    {item.hoverFrames ? (
+                      // Fixed square box (not w-auto) - the burst frames don't all share the same
+                      // intrinsic width, and letting the box follow that would shove every creature
+                      // to its right sideways and back on each frame swap.
+                      <HoverFrames frames={item.hoverFrames} className="h-16 w-16 object-contain sm:h-20 sm:w-20" />
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={item.image} alt="" aria-hidden="true" className="h-16 w-auto object-contain sm:h-20" />
+                    )}
+                    {/* Just the name, in the site's handwritten voice - no pill, no background,
+                        nothing else competing with it. */}
+                    <span className="font-nanum-pen pointer-events-none absolute top-full left-1/2 mt-1 -translate-x-1/2 text-[18px] whitespace-nowrap text-[#0e0e0d] opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      {item.label}
                     </span>
-                    {card.tag && <Eyebrow>{card.tag}</Eyebrow>}
-                  </span>
+                  </li>
+                );
+              })}
+            </ul>
+          );
+        }
+
+        if (block.kind === "cards") {
+          // These are parallel options, not a sequence, so no step numbering - just an eyebrow
+          // tag to categorize each one.
+          return (
+            <ul key={i} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {block.items.map((card) => (
+                <li key={card.title} className={`flex flex-col gap-1.5 ${CARD_CLASS}`}>
+                  {card.tag && <Eyebrow>{card.tag}</Eyebrow>}
                   <span className="font-nanum-pen text-[21px] leading-[1.2] text-[#0e0e0d] sm:text-[23px]">
                     {card.title}
                   </span>
                   <span className="font-helvetica text-[15px] leading-[1.6] text-[#33322f]">{card.text}</span>
                 </li>
               ))}
-            </ol>
+            </ul>
           );
         }
 
         if (block.kind === "gallery") {
+          // Same fanned, overlapping pile as the "embeds" block below - resting rotated and
+          // stacked, straightening, growing, and jumping to the front on hover.
+          const GALLERY_ROTATIONS = [-5, 4];
+          const GALLERY_OVERLAP_PX = 40;
           return (
-            <ul key={i} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {block.items.map((item) => (
-                <li key={item.title} className="flex flex-col gap-3 rounded-2xl border border-black/5 bg-white p-3 shadow-xs">
+            <ul key={i} className="flex w-full max-w-[68ch] justify-center py-2">
+              {block.items.map((item, idx) => (
+                <li
+                  key={item.title}
+                  className="group relative z-[var(--z)] flex w-[220px] shrink-0 flex-col gap-3 rotate-[var(--rot)] rounded-2xl border border-black/5 bg-white p-3 shadow-xs transition-transform duration-300 ease-out hover:z-40 hover:rotate-0 hover:scale-[1.3]"
+                  style={
+                    {
+                      marginLeft: idx === 0 ? 0 : -GALLERY_OVERLAP_PX,
+                      "--z": idx,
+                      "--rot": `${GALLERY_ROTATIONS[idx % GALLERY_ROTATIONS.length]}deg`,
+                    } as React.CSSProperties
+                  }
+                >
                   {/* Placeholder tile until real photos land - swap `image` in on the data item
                       and this renders it in place of the "coming soon" note, no markup changes. */}
                   <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden rounded-xl border border-dashed border-black/10 bg-[#f5f4f0]">
                     {item.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={item.image} alt={item.title} className="size-full object-cover" />
+                      <img src={item.image} alt={item.title} className="size-full cursor-zoom-in object-cover" />
                     ) : (
-                      <span className="font-nanum-pen px-4 text-center text-[15px] leading-[1.3] text-[#33322f]/40">
+                      <span className="font-helvetica px-4 text-center text-[14px] leading-[1.3] text-[#33322f]/40">
                         image coming soon
                       </span>
                     )}
                   </div>
+                  {item.image && (
+                    // The small thumbnail above is cropped to a 4:3 tile, which isn't enough to
+                    // actually read a screenshot's UI text - hovering pops this full, uncropped
+                    // version up over the page instead of relying on an in-place zoom that would
+                    // just magnify the same crop.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.image}
+                      alt=""
+                      aria-hidden="true"
+                      className="pointer-events-none absolute top-1/2 left-1/2 z-30 w-[680px] max-w-[92vw] max-h-[85vh] -translate-x-1/2 -translate-y-1/2 scale-95 rounded-xl border border-black/10 bg-white object-contain p-1 opacity-0 shadow-2xl transition-[opacity,transform] duration-150 group-hover:scale-100 group-hover:opacity-100"
+                    />
+                  )}
                   <div className="flex flex-col gap-1 px-1 pb-1">
                     <span className="font-nanum-pen text-[19px] leading-[1.2] text-[#0e0e0d] sm:text-[21px]">
                       {item.title}
@@ -454,14 +594,38 @@ function Blocks({ blocks }: { blocks: Block[] }) {
         }
 
         if (block.kind === "embeds") {
+          // A fanned, overlapping pile - like a loose stack of photo frames - rather than a grid
+          // or a scrolling filmstrip. Cards overlap by a fixed pixel amount (not a percentage), so
+          // the whole stack's footprint is the same ~270px at any viewport width instead of
+          // stretching wide on desktop or overflowing on mobile. Hovering a card straightens and
+          // lifts it to the front so the one you're looking at is never the one half-hidden.
+          const EMBED_SCALE = 0.38;
+          const CARD_ROTATIONS = [-6, 3, -4];
+          const OVERLAP_PX = 50;
+          // Centered against the 68ch text column above it, not the full (wider) grid track -
+          // otherwise the extra whitespace past the text's own line length pulls the stack
+          // visibly right of where the paragraph above it reads as "centered".
           return (
-            <ul key={i} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {block.items.map((item) => (
-                <li key={item.permalink} className="flex flex-col items-center gap-2">
-                  <span className="font-nanum-pen self-start text-[19px] leading-[1.2] text-[#0e0e0d] sm:text-[21px]">
+            <ul key={i} className="flex w-full max-w-[68ch] justify-center py-2">
+              {block.items.map((item, idx) => (
+                <li
+                  key={item.permalink}
+                  // z-index has to come from a class (z-[var(--z)]), not inline style - an inline
+                  // `style.zIndex` beats a `hover:z-40` class outright regardless of hover state,
+                  // which is why the hovered card wasn't actually reaching the front before.
+                  className={`relative z-[var(--z)] flex shrink-0 flex-col items-center gap-2 !p-3 rotate-[var(--rot)] transition-transform duration-300 ease-out hover:z-40 hover:rotate-0 hover:scale-[1.75] ${CARD_CLASS}`}
+                  style={
+                    {
+                      marginLeft: idx === 0 ? 0 : -OVERLAP_PX,
+                      "--z": idx,
+                      "--rot": `${CARD_ROTATIONS[idx % CARD_ROTATIONS.length]}deg`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <span className="font-nanum-pen self-start text-[15px] leading-[1.2] text-[#0e0e0d]">
                     {item.title}
                   </span>
-                  <InstagramEmbed permalink={item.permalink} />
+                  <InstagramEmbed permalink={item.permalink} scale={EMBED_SCALE} />
                 </li>
               ))}
             </ul>
@@ -496,15 +660,23 @@ function Blocks({ blocks }: { blocks: Block[] }) {
         if (block.kind === "list") {
           return (
             <ul key={i} className="flex max-w-[68ch] flex-col gap-3">
-              {block.items.map((item) => (
+              {block.items.map((item, itemIndex) => (
                 <li
                   key={item}
-                  className="font-helvetica relative pl-6 text-[16px] leading-[1.7] text-[#33322f] sm:text-[17px]"
+                  className="font-helvetica relative pl-9 text-[16px] leading-[1.7] text-[#33322f] sm:text-[17px]"
                 >
-                  <span
-                    aria-hidden="true"
-                    className="absolute left-0 top-[0.62em] size-[7px] shrink-0 rounded-full bg-[#ea34df]"
-                  />
+                  {/* A real multi-block lego piece instead of a plain bullet dot - a checklist
+                      made of little built things, not colored dots. Fixed-size slot (rather than
+                      sizing the SVG itself to fit pl-9) so the widest shape (line, 1x3) can't
+                      grow past its column and run into the text next to it. */}
+                  <span className="absolute top-[0.3em] left-0 flex size-6 shrink-0 items-center justify-center">
+                    <LegoBlock
+                      shape={STEP_SHAPES[itemIndex % STEP_SHAPES.length]}
+                      color={STUD_COLORS[itemIndex % STUD_COLORS.length]}
+                      aria-hidden="true"
+                      style={legoStyle(STEP_SHAPES[itemIndex % STEP_SHAPES.length], 6.5)}
+                    />
+                  </span>
                   {item}
                 </li>
               ))}
@@ -516,16 +688,34 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           <ol key={i} className="flex max-w-[68ch] flex-col gap-5">
             {block.items.map((step, stepIndex) => (
               <li key={step.title} className="flex gap-4">
-                <span className="font-helvetica mt-[2px] w-6 shrink-0 text-[14px] leading-[1.7] text-[#ea34df] tabular-nums">
-                  {String(stepIndex + 1).padStart(2, "0")}
-                </span>
-                <span className="flex flex-col gap-1">
+                {/* A real multi-block lego piece instead of a "01/02" number - these are the
+                    site's actual tetromino shapes and brick colors, cycled per step so the
+                    sequence reads as a little built-up row rather than a numbered list. */}
+                <div className="flex size-7 shrink-0 items-center justify-center">
+                  <LegoBlock
+                    shape={STEP_SHAPES[stepIndex % STEP_SHAPES.length]}
+                    color={STUD_COLORS[stepIndex % STUD_COLORS.length]}
+                    className="animate-lego-pop"
+                    style={legoStyle(STEP_SHAPES[stepIndex % STEP_SHAPES.length], 8)}
+                  />
+                </div>
+                <span className="flex min-w-0 flex-col gap-1">
                   <span className="font-nanum-pen text-[21px] leading-[1.2] text-[#0e0e0d] sm:text-[23px]">
                     {step.title}
                   </span>
                   <span className="font-helvetica text-[16px] leading-[1.7] text-[#33322f] sm:text-[17px]">
                     {step.text}
                   </span>
+                  {step.href && (
+                    <a
+                      href={step.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-helvetica w-fit max-w-full text-[15px] break-words text-[#ea34df] underline decoration-[#ea34df] decoration-2 underline-offset-4 transition-colors hover:text-[#0e0e0d]"
+                    >
+                      {step.linkLabel ?? step.href}
+                    </a>
+                  )}
                 </span>
               </li>
             ))}
@@ -540,33 +730,47 @@ export default function HandbookPage() {
   return (
     // data-page is what turns the root layout's mandatory scroll snapping off for this route - see
     // globals.css. The home page is a deck of full-screen panels; this is a document.
-    <main data-page="handbook" className="w-full bg-white text-[#0e0e0d]">
+    // overflow-x-hidden guards against the page's decorative bits - fanned/rotated card piles,
+    // the full-size hover-preview popups, the overlapping creature crowd - pushing the document
+    // wider than the viewport on narrow screens and introducing an unwanted horizontal scrollbar.
+    <main data-page="handbook" className="w-full overflow-x-hidden bg-white text-[#0e0e0d]">
       <div className="mx-auto w-full max-w-[1120px] px-5 sm:px-8 lg:px-10">
-        <header className="flex flex-col gap-6 border-b border-black/10 py-14 sm:py-20">
-          <Link
-            href="/"
-            className="font-helvetica w-fit text-[13px] tracking-[0.08em] text-[#33322f] uppercase transition-colors hover:text-[#ea34df]"
-          >
-            ← back to useless projects
-          </Link>
-          <h1
-            className="font-drowner leading-[0.9] text-[#0e0e0d]"
-            // Fluid rather than stepped, so the title fills the measure at every width instead of
-            // jumping at breakpoints - it is the one element big enough for the difference to show.
-            style={{ fontSize: "clamp(56px, 13vw, 132px)", letterSpacing: "0.02em" }}
-          >
-            handbook
-          </h1>
+        <header className="relative flex flex-col gap-6 border-b border-black/10 py-14 sm:py-20">
+          {/* Flex-centered against the heading rather than absolutely positioned with a guessed
+              top offset - the heading's fluid clamp() size means its box height keeps changing
+              across viewports, so any fixed top value drifts out of alignment at some width. */}
+          <div className="flex items-center justify-between gap-4">
+            <h1
+              className="font-drowner leading-[0.9] text-[#0e0e0d]"
+              // Fluid rather than stepped, so the title fills the measure at every width instead of
+              // jumping at breakpoints - it is the one element big enough for the difference to show.
+              style={{ fontSize: "clamp(56px, 13vw, 132px)", letterSpacing: "0.02em" }}
+            >
+              handbook
+            </h1>
+            <Link
+              href="/"
+              className="font-helvetica shrink-0 rounded-full bg-[#0e0e0d] px-5 py-2 text-[13px] tracking-[0.08em] text-white uppercase transition-transform hover:scale-105"
+            >
+              back
+            </Link>
+          </div>
           <p className="font-nanum-pen max-w-[46ch] text-[21px] leading-[1.4] text-[#244638] sm:text-[24px]">
             Everything worth knowing before you build something nobody asked for. Rules, timings, and how to take
             part.
           </p>
+          {/* The hero's breathing corner-dot badges, same asset set and behaviour - hovering
+              swaps each to a random other color from the set. A little scattered cluster rather
+              than a single dot, matching how the homepage hero uses more than one. */}
+          <HoverDot assets={DOT_ASSETS} baseIndex={2} size={28} className="absolute top-2 right-28 hidden sm:block lg:right-40" />
+          <HoverDot assets={DOT_ASSETS} baseIndex={0} size={16} className="absolute top-16 right-16 hidden sm:block lg:right-28" />
+          <HoverDot assets={DOT_ASSETS} baseIndex={3} size={20} className="absolute bottom-6 left-2 hidden sm:block" />
         </header>
 
-        <div className="grid gap-12 py-12 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-16 lg:py-16">
+        <div className="grid grid-cols-1 gap-12 py-12 lg:grid-cols-[190px_minmax(0,1fr)] lg:gap-16 lg:py-16">
           {/* Sticks alongside the content on wide screens; above it, and scrollable sideways if the
               list ever outgrows the width, on narrow ones. */}
-          <nav aria-label="Handbook sections" className="lg:sticky lg:top-12 lg:self-start">
+          <nav aria-label="Handbook sections" className="hidden lg:sticky lg:top-12 lg:block lg:self-start">
             <p className="font-helvetica mb-4 text-[12px] tracking-[0.1em] text-[#33322f]/60 uppercase">Contents</p>
             <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:flex-col lg:gap-3 lg:overflow-visible lg:px-0">
               {SECTIONS.map((section) => (
@@ -600,7 +804,7 @@ export default function HandbookPage() {
           </div>
         </div>
 
-        <footer className="flex flex-col gap-4 border-t border-black/10 py-12 sm:flex-row sm:items-center sm:justify-between sm:py-14">
+        <footer className="flex flex-col gap-4 border-t border-black/10 py-12 sm:py-14">
           <p className="font-nanum-pen text-[20px] leading-[1.4] text-[#244638]">
             Still have a question?{" "}
             <a
@@ -610,12 +814,6 @@ export default function HandbookPage() {
               campus@tinkerhub.org
             </a>
           </p>
-          <Link
-            href="/"
-            className="font-helvetica w-fit text-[13px] tracking-[0.08em] text-[#33322f] uppercase transition-colors hover:text-[#ea34df]"
-          >
-            ← back to useless projects
-          </Link>
         </footer>
       </div>
     </main>

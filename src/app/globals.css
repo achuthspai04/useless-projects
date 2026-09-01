@@ -29,6 +29,19 @@ html:has([data-page="handbook"]) {
   scroll-snap-type: none;
 }
 
+/* Instagram's oEmbed script hardcodes a 326px min-width on the processed iframe's own inline
+   style, overriding whatever width the blockquote asked for. Forcing anything narrower than that
+   (an earlier version of this rule tried 260px) doesn't shrink the embed - it just clips Instagram's
+   internal layout, which still renders at >=326px regardless of the outer box. 328px is the
+   smallest width that avoids that clipping; "smaller" has to come from page layout (fewer columns,
+   more surrounding space) instead. */
+[data-page="handbook"] .instagram-media,
+[data-page="handbook"] iframe.instagram-media {
+  width: 328px !important;
+  min-width: 328px !important;
+  max-width: 328px !important;
+}
+
 /* appam-section.tsx: the scroll-driven project handover runs on all viewport sizes. The section
    is as many viewports tall as there are projects; mobile uses dynamically-computed drift bounds
    (see mobileDrift in the component) to guarantee boards park off-screen despite the mobile frame
