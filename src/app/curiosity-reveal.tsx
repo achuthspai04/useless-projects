@@ -1,7 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo } from "react";
+import { scatterPlacements } from "./scatter-placement";
 import TetrisField from "./tetris-field";
+import { VENUES } from "./venues";
 
 // Figma node 337:386 ("Frame 74"), reproduced at its own 120x180 size and scaled to whatever the
 // lego grid gives it - that frame is 2:3, which is exactly a 2-cell x 3-cell patch of the board.
@@ -104,34 +107,10 @@ function DateCards({
   cardCols: number;
   cardRows: number;
 }) {
-  const placed = useMemo(() => {
-    const taken: { col: number; row: number }[] = [];
-    const maxCol = columns - cardCols;
-    const maxRow = rows - cardRows;
-    const free = (col: number, row: number) =>
-      !taken.some(
-        (t) =>
-          col < t.col + cardCols && col + cardCols > t.col && row < t.row + cardRows && row + cardRows > t.row
-      );
-
-    return SCHEDULE.map((entry) => {
-      let spot: { col: number; row: number } | null = null;
-      for (let attempt = 0; attempt < 300 && !spot; attempt++) {
-        const col = Math.floor(Math.random() * (maxCol + 1));
-        const row = Math.floor(Math.random() * (maxRow + 1));
-        if (free(col, row)) spot = { col, row };
-      }
-      // Random draws can keep colliding once the board is busy; fall back to the first free spot
-      // in a plain scan so a date is never silently dropped.
-      for (let row = 0; row <= maxRow && !spot; row++) {
-        for (let col = 0; col <= maxCol && !spot; col++) {
-          if (free(col, row)) spot = { col, row };
-        }
-      }
-      if (spot) taken.push(spot);
-      return spot ? { ...entry, ...spot } : null;
-    }).filter((c): c is (typeof SCHEDULE)[number] & { col: number; row: number } => c !== null);
-  }, [columns, rows, cardCols, cardRows]);
+  const placed = useMemo(
+    () => scatterPlacements(SCHEDULE, { columns, rows, cardCols, cardRows }),
+    [columns, rows, cardCols, cardRows]
+  );
 
   const width = cardCols * cell - unit;
 
@@ -155,23 +134,97 @@ function DateCards({
   );
 }
 
+/**
+ * One venue tile: a real photo (unlike the date card's drawn type), so it gets next/image's
+ * automatic resizing/format negotiation rather than a plain <img> - with 17 of these sitting in
+ * public/venues at up to ~1MB each, shipping them unoptimized would be the actual performance
+ * cost here. Sits at rest exactly filling its scattered cell patch; hovering scales the tile up
+ * and fades in the name over it, both driven by the group so the whole patch is the hit target.
+ */
+function VenueCard({ name, image, width }: { name: string; image: string; width: number }) {
+  return (
+    <div className="group absolute inset-0">
+      <div className="relative size-full origin-center bg-white shadow-md transition-transform duration-200 ease-out group-hover:z-20 group-hover:scale-[1.35]">
+        <Image src={image} alt="" fill sizes={`${Math.ceil(width)}px`} className="object-cover" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-center bg-gradient-to-t from-black/75 to-transparent px-1 pt-6 pb-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <span className="font-nanum-pen text-center text-[13px] leading-tight text-white">{name}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The venue roster scattered the same way DateCards are (see scatterPlacements), but over its own
+ * square footprint (see venueCardCols/Rows below) rather than the date card's 2:3 one - a photo
+ * reads fine cropped square, and it keeps the tiles compact. Deliberately no overflow-hidden on
+ * the outer patch (unlike DateCards): VenueCard's hover scale is meant to spill over its
+ * neighbours, not get clipped to its own cell.
+ */
+function VenueCards({
+  columns,
+  rows,
+  cell,
+  unit,
+  cardCols,
+  cardRows,
+}: {
+  columns: number;
+  rows: number;
+  cell: number;
+  unit: number;
+  cardCols: number;
+  cardRows: number;
+}) {
+  const placed = useMemo(
+    () => scatterPlacements(VENUES, { columns, rows, cardCols, cardRows }),
+    [columns, rows, cardCols, cardRows]
+  );
+
+  const width = cardCols * cell - unit;
+  const height = cardRows * cell - unit;
+
+  return (
+    <>
+      {placed.map((venue) => (
+        <div
+          key={venue.image}
+          className="animate-lego-pop absolute"
+          style={{ left: venue.col * cell, bottom: venue.row * cell, width, height }}
+        >
+          <VenueCard name={venue.name} image={venue.image} width={width} />
+        </div>
+      ))}
+    </>
+  );
+}
+
 // The "know when?" reveal: fills the whole section with the tetris board's finished state - the
 // exact same TetrisField the hero runs, rendered in its flooded end state (see the `flooded` prop)
-// rather than reimplemented here - and then scatters the event dates across it. The caller drives
-// the sequencing (board, then cards, then back to the section); this just renders a given step.
+// rather than reimplemented here - and then scatters either the event dates or the venue roster
+// across it, depending on `stage`. The caller (TimerSection) drives the sequencing (board, then
+// dates, then venues, then back to the section); this just renders a given step.
 export default function CuriosityReveal({
   targetCell,
   cardCols,
   cardRows,
-  showCards,
+  venueCardCols,
+  venueCardRows,
+  stage,
 }: {
   /** Passed straight through to TetrisField - the hero uses 68 on desktop and 22 on mobile. */
   targetCell: number;
-  /** Card footprint in cells. 2x3 matches the Figma frame's own 120x180 exactly; mobile scales
+  /** Date card footprint in cells. 2x3 matches the date card's Figma frame exactly; mobile scales
    *  both up together (keeping 2:3) so the cards stay legible against its much smaller cells. */
   cardCols: number;
   cardRows: number;
-  showCards: boolean;
+  /** Venue tile footprint in cells - square, independent of the date card's own footprint since a
+   *  venue photo reads fine cropped square. The caller sizes this per breakpoint (a single cell on
+   *  desktop's larger grid, 2x2 on mobile's much smaller one). */
+  venueCardCols: number;
+  venueCardRows: number;
+  /** null keeps the board bare (mid-flood, before either set of cards has popped in). */
+  stage: "dates" | "venues" | null;
 }) {
   return (
     <div className="absolute inset-0 z-10 overflow-hidden">
@@ -179,8 +232,13 @@ export default function CuriosityReveal({
         targetCell={targetCell}
         flooded
         overlay={
-          showCards
-            ? (grid) => <DateCards {...grid} cardCols={cardCols} cardRows={cardRows} />
+          stage
+            ? (grid) =>
+                stage === "dates" ? (
+                  <DateCards {...grid} cardCols={cardCols} cardRows={cardRows} />
+                ) : (
+                  <VenueCards {...grid} cardCols={venueCardCols} cardRows={venueCardRows} />
+                )
             : undefined
         }
       />
