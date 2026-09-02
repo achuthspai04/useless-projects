@@ -45,7 +45,7 @@ type Block =
   | { kind: "gallery"; items: { title: string; text: string; image?: string }[] }
   | { kind: "embeds"; items: { title: string; permalink: string }[] }
   | { kind: "video"; youtubeId: string; title: string }
-  | { kind: "prizes"; items: { label: string; text?: string; locked?: boolean }[]; size?: "sm" | "lg" }
+  | { kind: "prizes"; items: { label: string; text?: string; locked?: boolean; image?: string; imageScale?: number }[]; size?: "sm" | "lg" }
   | { kind: "creatures"; items: { label: string; image: string; hoverFrames?: string[] }[] };
 
 type Section = {
@@ -149,12 +149,8 @@ const SECTIONS: Section[] = [
         kind: "steps",
         items: [
           {
-            title: "Build your journal alongside your project",
-            text: "Keep a journal documenting your process as you build. It lives on a separate branch of the same repo, not in the project code itself. Pushing to that branch auto-deploys it to your GitHub Pages, so your build log is live as you go, not written up after the fact.",
-          },
-          {
             title: "Keep an updated README",
-            text: "Keep an updated README and a well-documented repo, including the GitHub Pages link for your journal, so judges and other participants can find it.",
+            text: "Keep an updated README and a well-documented repo, so judges and other participants can find it.",
           },
         ],
       },
@@ -242,11 +238,10 @@ const SECTIONS: Section[] = [
         kind: "prizes",
         size: "lg",
         items: [
-          { label: "top 25 makers", text: "The 25 highest-scoring makers get a monthly scholarship worth up to ₹5 lakh." },
-          { label: "top 50 projects", text: "The 50 highest-scoring projects get a showcase slot at Make Fair Kerala." },
-          { label: "goodies bag", text: "Selected participants take home a goodies bag." },
-          { label: "mentorship", text: "Selected participants get mentorship from industry experts." },
-          { label: "learning access", text: "Selected participants get access to exclusive learning programs." },
+          { label: "top 25 makers", text: "The 25 highest-scoring makers get a monthly scholarship worth up to ₹5 lakh.", image: "/handbook/5l.png" },
+          { label: "top 50 projects", text: "The 50 highest-scoring projects get a showcase slot at Maker Fair Kochi." },
+          { label: "goodies bag", text: "Selected participants take home a goodies bag.", image: "/handbook/goodie-bag.png" },
+          { label: "mentorship & learning access", text: "Selected participants get mentorship from industry experts and access to exclusive learning programs.", image: "/handbook/teachign.png" },
         ],
       },
       {
@@ -261,7 +256,7 @@ const SECTIONS: Section[] = [
         kind: "prizes",
         size: "sm",
         items: [
-          { label: "best build video documentary" },
+          { label: "best build video documentary", image: "/handbook/video.png" },
           { label: "", locked: true },
           { label: "", locked: true },
         ],
@@ -366,34 +361,56 @@ function PrizeMedal({
   text,
   size = "lg",
   locked = false,
+  image,
+  imageScale = 1.3,
 }: {
   label: string;
   text?: string;
   size?: "sm" | "lg";
   locked?: boolean;
+  image?: string;
+  imageScale?: number;
 }) {
   const svgSize = size === "lg" ? 112 : 76;
   const boxWidth = size === "lg" ? 140 : 100;
+  const imageSize = svgSize * imageScale;
+  // Every icon (medal SVG or badge image) sits in a slot of the same height per size variant,
+  // so the label underneath lines up across a row even when a badge image scales larger than
+  // the medal it's standing in for.
+  const slotHeight = size === "lg" ? 150 : 145;
   return (
     <li className="relative flex flex-col items-center gap-2 text-center" style={{ width: `${boxWidth}px` }}>
       <div className={locked ? "flex flex-col items-center gap-2 blur-[3px] opacity-40 select-none" : "flex flex-col items-center gap-2"}>
-        <svg viewBox="0 0 100 108" width={svgSize} height={svgSize * 1.08} aria-hidden="true">
-          <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
-          <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
-          <path d={SEAL_PATH} fill="#ea34df" />
-          <circle cx="50" cy="42" r="28" fill="#fff" />
-          <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
-          <text
-            x="50"
-            y="53"
-            textAnchor="middle"
-            fontSize="30"
-            fill="#ea34df"
-            style={{ fontFamily: "var(--font-drowner)" }}
-          >
-            ★
-          </text>
-        </svg>
+        <div className="flex items-center justify-center" style={{ height: slotHeight }}>
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={image}
+              alt=""
+              aria-hidden="true"
+              className="max-w-none object-contain"
+              style={{ width: imageSize, height: imageSize }}
+            />
+          ) : (
+            <svg viewBox="0 0 100 108" width={svgSize} height={svgSize * 1.08} aria-hidden="true">
+              <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
+              <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
+              <path d={SEAL_PATH} fill="#ea34df" />
+              <circle cx="50" cy="42" r="28" fill="#fff" />
+              <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
+              <text
+                x="50"
+                y="53"
+                textAnchor="middle"
+                fontSize="30"
+                fill="#ea34df"
+                style={{ fontFamily: "var(--font-drowner)" }}
+              >
+                ★
+              </text>
+            </svg>
+          )}
+        </div>
         <span className={`font-nanum-pen leading-[1.1] text-[#0e0e0d] ${size === "lg" ? "text-[20px]" : "text-[15px]"}`}>
           {label}
         </span>
@@ -454,7 +471,7 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           return (
             <ul key={i} className="flex flex-wrap justify-center gap-x-6 gap-y-8 py-2 sm:justify-start">
               {block.items.map((item, itemIndex) => (
-                <PrizeMedal key={`${item.label}-${itemIndex}`} label={item.label} text={item.text} size={block.size} locked={item.locked} />
+                <PrizeMedal key={`${item.label}-${itemIndex}`} label={item.label} text={item.text} size={block.size} locked={item.locked} image={item.image} imageScale={item.imageScale} />
               ))}
             </ul>
           );
