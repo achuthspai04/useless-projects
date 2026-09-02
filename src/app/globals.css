@@ -171,3 +171,15 @@ html:has([data-page="handbook"]) {
 .pixel-burst {
   animation: pixel-burst 550ms ease-out forwards;
 }
+
+/* The timer page's scroll-wheel time picker: a native OS scrollbar down the side of a 5-item-tall
+   wheel would fight the "slot machine" reel illusion, so it's hidden - scrolling itself stays
+   fully working, this only hides the track/thumb chrome. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

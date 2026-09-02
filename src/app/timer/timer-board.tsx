@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import LegoBlock, { PITCH } from "../lego-block";
-import { buildSkyline, FALL_ROWS_PER_MS, placeBlock, spawnRow, type Placed } from "../tetris-field";
+import { buildSkyline, FALL_ROWS_PER_MS, placeBlock, type Placed } from "../tetris-field";
 
 const TARGET_CELL = 56;
 const MIN_COLUMNS = 8;
@@ -11,7 +11,14 @@ const MAX_COLUMNS = 44;
 // countdown (few blocks needed per second) still reads as discrete drops rather than a blur.
 const MIN_LAND_PAUSE_MS = 110;
 
-/** The one piece currently falling: painted at `spawnRow` first, then - once the browser has
+// Every piece starts a full board-height above the top of the screen, rather than just a few
+// rows of clearance above wherever it happens to land (the hero's own spawnRow) - with exactly
+// one piece on screen at a time here, a drop late in the countdown landing near the top of an
+// already-full board should still read as falling from the top of the screen, not hopping the
+// last row or two into place.
+const topSpawnRow = (rows: number) => rows * 2;
+
+/** The one piece currently falling: painted at `topSpawnRow` first, then - once the browser has
  *  actually committed that frame - transitioned down to its landing spot. `cycleMs` is this
  *  block's whole time budget (fall + the pause before the next one starts) - see TimerBoard for
  *  where that comes from. Calls `onLanded` once the full cycle (not just the fall) is done. */
@@ -32,40 +39,44 @@ function FallingBlock({
 }) {
   const box = placeBlock(piece, cell, unit);
   const [falling, setFalling] = useState(false);
-  const elRef = useRef<HTMLDivElement>(null);
 
   // The fall itself stays at the hero's own natural speed - snappy - and only ever gets faster,
   // never slower, than that: what stretches to fit a longer countdown is the pause after it,
   // not the drop. A budget shorter than the natural fall (many blocks, very little time) instead
   // speeds the fall up to fit, so the queue can't permanently fall behind schedule.
-  const fallRows = spawnRow(rows) - piece.bottom;
+  const fallRows = topSpawnRow(rows) - piece.bottom;
   const naturalFallMs = fallRows / FALL_ROWS_PER_MS;
   const fallMs = Math.max(1, Math.min(naturalFallMs, cycleMs - MIN_LAND_PAUSE_MS));
   const pauseMs = Math.max(MIN_LAND_PAUSE_MS, cycleMs - fallMs);
 
   useEffect(() => {
-    const el = elRef.current;
-    if (!el) return;
-    // Reading a layout property forces the browser to actually commit/paint the spawn-position
-    // frame (transition: none) before this flips to the landing position - without that flush
-    // the two style changes can land in the same paint, leaving nothing for the transition to
-    // interpolate from (it would just snap).
-    void el.getBoundingClientRect();
-    setFalling(true);
+    // Two nested frames, same as the hero's own spawn: the first lets the browser actually paint
+    // this block at its spawn position (transition: none), the second - a frame later - flips on
+    // the transition and moves it to its landing spot. Collapsing this to one frame (or forcing a
+    // layout read instead) isn't enough: a layout read forces a synchronous *reflow*, not a
+    // *paint*, so both style states can still land in the same paint and the block just appears
+    // at rest with nothing to animate from - which is exactly what a single frame looks like.
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setFalling(true));
+    });
     const id = setTimeout(onLanded, fallMs + pauseMs);
-    return () => clearTimeout(id);
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(id);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per mounted piece (key'd by the caller)
   }, []);
 
   return (
     <div
-      ref={elRef}
       className="absolute"
       style={{
         left: box.left,
         width: box.width,
         height: box.height,
-        bottom: falling ? box.bottom : spawnRow(rows) * cell,
+        bottom: falling ? box.bottom : topSpawnRow(rows) * cell,
         transition: falling ? `bottom ${fallMs}ms linear` : "none",
       }}
     >

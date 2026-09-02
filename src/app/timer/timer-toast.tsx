@@ -15,8 +15,10 @@ const TOAST_MS = 6000;
 
 /**
  * Renders nothing itself - just watches `remainingSeconds` and hands the caller one message at a
- * time through `onMessage` as thresholds are crossed (including "time's up" at zero), so the
- * caller owns how/where the toast actually renders.
+ * time through `onMessage` as thresholds are crossed, so the caller owns how/where the toast
+ * actually renders. Zero itself isn't one of these - the countdown display already switches to
+ * "time's up!" in place of the digits at that point, so a banner announcing the same thing on
+ * top of it would just be a redundant second message.
  */
 export function useTimerMilestones(remainingSeconds: number | null, running: boolean) {
   const [message, setMessage] = useState<string | null>(null);
@@ -41,11 +43,6 @@ export function useTimerMilestones(remainingSeconds: number | null, running: boo
       hideTimer.current = setTimeout(() => setMessage(null), TOAST_MS);
     };
 
-    if (remainingSeconds <= 0 && !firedRef.current.has(0)) {
-      firedRef.current.add(0);
-      announce("time's up!");
-      return;
-    }
     if (prev === null) return;
     for (const { atSeconds, text } of MILESTONES) {
       if (prev > atSeconds && remainingSeconds <= atSeconds && !firedRef.current.has(atSeconds)) {

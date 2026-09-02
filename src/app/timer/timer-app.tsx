@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TimerBoard from "./timer-board";
 import TimerToast, { useTimerMilestones } from "./timer-toast";
 import { clearTimer, loadTimer, saveTimer, type StoredTimer } from "./storage";
@@ -19,60 +19,149 @@ function splitDuration(ms: number) {
   };
 }
 
-/** A datetime-local input's value has no timezone - it means "this clock time here", so it
- *  parses correctly through `new Date(value)` without any extra offset math. */
-function parseLocalDateTime(value: string) {
-  const ms = new Date(value).getTime();
-  return Number.isFinite(ms) ? ms : null;
+// Custom picker rather than the browser's native date/time input: that popup is entirely the
+// OS's own chrome (different on every platform, unstyleable). Date, hour, minute and AM/PM are
+// all the same control - a scrolling reel, genuinely scroll-and-snap like a slot machine, not a
+// stepper standing in for one.
+function startOfDay(d: Date) {
+  const c = new Date(d);
+  c.setHours(0, 0, 0, 0);
+  return c;
 }
 
-function minDateTimeLocal() {
-  // A minute from now, formatted for <input type="datetime-local">, so the picker can't be
-  // submitted with an end time that's already effectively "now".
-  const d = new Date(Date.now() + 60_000);
-  d.setSeconds(0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
+const REEL_ITEM_HEIGHT = 40;
+const REEL_VISIBLE_ROWS = 5;
+const REEL_HEIGHT = REEL_ITEM_HEIGHT * REEL_VISIBLE_ROWS;
+const REEL_PAD = (REEL_HEIGHT - REEL_ITEM_HEIGHT) / 2;
 
-const DURATION_PRESETS = [
-  { label: "15 min", ms: 15 * 60_000 },
-  { label: "30 min", ms: 30 * 60_000 },
-  { label: "1 hour", ms: 60 * 60_000 },
-  { label: "2 hours", ms: 2 * 60 * 60_000 },
-  { label: "4 hours", ms: 4 * 60 * 60_000 },
-] as const;
-
-function PresetButton({
-  selected,
-  onClick,
-  children,
+/**
+ * A real scrolling reel: drag/swipe/wheel it and it settles on whichever option lands under the
+ * centre band. Clicking an option scrolls it to centre instead of jumping straight there, so the
+ * motion always reads the same way regardless of how a value got picked.
+ */
+function Reel<T extends string | number>({
+  options,
+  value,
+  onChange,
+  format,
+  width = 68,
 }: {
-  selected?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
+  options: readonly T[];
+  value: T;
+  onChange: (v: T) => void;
+  format?: (v: T) => string;
+  width?: number;
 }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const index = options.indexOf(value);
+
+  // Only ever positions the reel once, on mount (to match the picker's default value) - after
+  // that the user's own scrolling is the sole source of truth, so this never fights a gesture or
+  // an in-flight snap by jumping the scroll position out from under it.
+  useEffect(() => {
+    const el = ref.current;
+    if (el) el.scrollTop = index * REEL_ITEM_HEIGHT;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const settle = (targetIndex: number) => {
+    const el = ref.current;
+    if (!el) return;
+    const clamped = Math.min(options.length - 1, Math.max(0, targetIndex));
+    el.scrollTo({ top: clamped * REEL_ITEM_HEIGHT, behavior: "smooth" });
+    const next = options[clamped];
+    if (next !== value) onChange(next);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`font-nanum-pen cursor-pointer rounded-2xl border py-3 text-[17px] transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
-        selected
-          ? "border-black bg-black text-white"
-          : "border-black/10 bg-white text-[#0e0e0d] hover:border-black/25 hover:shadow-md"
-      }`}
-    >
-      {children}
-    </button>
+    <div className="relative" style={{ height: REEL_HEIGHT, width }}>
+      <div
+        className="pointer-events-none absolute inset-x-0 rounded-xl border-y border-black/10 bg-black/[0.03]"
+        style={{ top: REEL_PAD, height: REEL_ITEM_HEIGHT }}
+      />
+      <div
+        ref={ref}
+        onScroll={() => {
+          if (settleTimer.current) clearTimeout(settleTimer.current);
+          // Debounced rather than acting on every scroll event: only once the reel has actually
+          // stopped moving (no scroll events for a beat) does "wherever it's sitting" mean
+          // anything - mid-motion it's just passing through.
+          settleTimer.current = setTimeout(() => {
+            const el = ref.current;
+            if (el) settle(Math.round(el.scrollTop / REEL_ITEM_HEIGHT));
+          }, 120);
+        }}
+        className="no-scrollbar h-full overflow-y-scroll"
+        style={{ scrollSnapType: "y mandatory" }}
+      >
+        <div style={{ height: REEL_PAD }} />
+        {options.map((opt, i) => (
+          <button
+            key={opt}
+            type="button"
+            onClick={() => settle(i)}
+            className={`font-drowner flex w-full cursor-pointer items-center justify-center transition-colors ${
+              opt === value ? "text-[#0e0e0d]" : "text-black/25"
+            }`}
+            style={{ height: REEL_ITEM_HEIGHT, scrollSnapAlign: "center" }}
+          >
+            {format ? format(opt) : opt}
+          </button>
+        ))}
+        <div style={{ height: REEL_PAD }} />
+      </div>
+    </div>
   );
 }
 
-// A picker built from two complementary paths rather than one form: most people building a
-// timer know roughly how *long* they're working, not the exact clock time it ends at - so
-// duration presets are the primary, one-tap path, with the native datetime-local picker tucked
-// behind "custom" for the rarer case of a precise end time.
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
+const MINUTES = Array.from({ length: 60 }, (_, i) => i);
+const PERIODS = ["AM", "PM"] as const;
+const DATE_COUNT = 30;
+
+function dateOptions() {
+  const today = startOfDay(new Date()).getTime();
+  return Array.from({ length: DATE_COUNT }, (_, i) => today + i * 86_400_000);
+}
+
+function formatDateOption(ms: number, todayMs: number) {
+  const diffDays = Math.round((ms - todayMs) / 86_400_000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tmrw";
+  return new Date(ms).toLocaleDateString(undefined, { weekday: "short", day: "numeric" });
+}
+
+/** hour is kept in 12-hour form (1-12) since that's how the reel displays it. */
+function partsFromDate(date: Date) {
+  const h24 = date.getHours();
+  return {
+    hour: ((h24 + 11) % 12) + 1,
+    minute: date.getMinutes(),
+    period: (h24 >= 12 ? "PM" : "AM") as "AM" | "PM",
+  };
+}
+
+function composeEndAt(dayMs: number, hour: number, minute: number, period: "AM" | "PM") {
+  const h24 = period === "PM" ? (hour % 12) + 12 : hour % 12;
+  const d = new Date(dayMs);
+  d.setHours(h24, minute, 0, 0);
+  return d.getTime();
+}
+
 function SetupForm({ onStart }: { onStart: (endAt: number) => void }) {
-  const [customOpen, setCustomOpen] = useState(false);
-  const [value, setValue] = useState("");
+  const [dates] = useState(dateOptions);
+  // Both derived from the same instant, so a default that happens to roll past midnight (someone
+  // opening this at 11:40pm) lands on "Tomorrow" with a matching time, not "Today" with a time
+  // that's already in the past.
+  const [defaults] = useState(() => {
+    const defaultEnd = new Date(Date.now() + 60 * 60_000);
+    return { dayMs: startOfDay(defaultEnd).getTime(), ...partsFromDate(defaultEnd) };
+  });
+  const [dayMs, setDayMs] = useState(defaults.dayMs);
+  const [hour, setHour] = useState(defaults.hour);
+  const [minute, setMinute] = useState(defaults.minute);
+  const [period, setPeriod] = useState<"AM" | "PM">(defaults.period);
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -81,58 +170,33 @@ function SetupForm({ onStart }: { onStart: (endAt: number) => void }) {
         set a build timer
       </h1>
       <p className="font-helvetica text-[15px] leading-[1.5] text-[#33322f]">
-        Pick how long the build runs for. The board fills in as the clock runs down.
+        Pick when you want to stop. The board fills in as the clock runs down.
       </p>
 
-      <div className="grid w-full grid-cols-3 gap-2.5">
-        {DURATION_PRESETS.map((preset) => (
-          <PresetButton key={preset.label} onClick={() => onStart(Date.now() + preset.ms)}>
-            {preset.label}
-          </PresetButton>
-        ))}
-        <PresetButton selected={customOpen} onClick={() => setCustomOpen((v) => !v)}>
-          custom
-        </PresetButton>
+      <div className="flex items-center gap-1">
+        <Reel options={dates} value={dayMs} onChange={setDayMs} format={(ms) => formatDateOption(ms, dates[0])} width={84} />
+        <Reel options={HOURS} value={hour} onChange={setHour} format={pad} />
+        <span className="font-drowner text-[22px] text-[#0e0e0d]">:</span>
+        <Reel options={MINUTES} value={minute} onChange={setMinute} format={pad} />
+        <Reel options={PERIODS} value={period} onChange={setPeriod} />
       </div>
 
-      {customOpen && (
-        <form
-          className="flex w-full flex-col items-center gap-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const endAt = value ? parseLocalDateTime(value) : null;
-            if (endAt === null || endAt <= Date.now()) {
-              setError("Pick a time in the future.");
-              return;
-            }
-            onStart(endAt);
-          }}
-        >
-          <label className="flex w-full flex-col gap-2 text-left">
-            <span className="font-helvetica text-[13px] tracking-[0.04em] text-[#33322f] uppercase">ends at</span>
-            <input
-              type="datetime-local"
-              value={value}
-              min={minDateTimeLocal()}
-              onChange={(e) => {
-                setValue(e.target.value);
-                setError(null);
-              }}
-              className="font-helvetica w-full rounded-2xl border border-black/15 bg-white px-4 py-3.5 text-[17px] text-[#0e0e0d] shadow-sm outline-none transition-colors focus:border-black"
-              style={{ colorScheme: "light" }}
-              required
-              autoFocus
-            />
-          </label>
-          {error && <p className="font-helvetica text-[13px] text-[#e82803]">{error}</p>}
-          <button
-            type="submit"
-            className="font-nanum-pen w-full cursor-pointer rounded-full bg-black py-3 text-[20px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0.5"
-          >
-            start timer
-          </button>
-        </form>
-      )}
+      {error && <p className="font-helvetica text-[13px] text-[#e82803]">{error}</p>}
+
+      <button
+        type="button"
+        onClick={() => {
+          const endAt = composeEndAt(dayMs, hour, minute, period);
+          if (endAt <= Date.now()) {
+            setError("Pick a time in the future.");
+            return;
+          }
+          onStart(endAt);
+        }}
+        className="font-nanum-pen w-full cursor-pointer rounded-full bg-black py-3 text-[20px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0.5"
+      >
+        start timer
+      </button>
     </div>
   );
 }
@@ -232,25 +296,40 @@ export default function TimerApp() {
         <MinimizedPill hours={hours} minutes={minutes} seconds={seconds} onExpand={() => setMinimized(false)} />
       ) : (
         <>
-          <button
-            type="button"
-            onClick={() => setMinimized(true)}
-            className="font-helvetica absolute top-6 right-6 z-20 cursor-pointer rounded-full bg-black/80 px-4 py-2 text-[13px] text-white backdrop-blur transition-transform duration-200 ease-out hover:-translate-y-0.5"
-            aria-label="Minimize timer"
-          >
-            minimize
-          </button>
+          {/* Reset and minimize grouped together (top-right) - reset is the "I didn't mean to
+              start this" escape hatch, available the moment the timer starts, not just once the
+              countdown has already finished. */}
+          <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={resetTimer}
+              className="font-helvetica cursor-pointer rounded-full bg-black/80 px-4 py-2 text-[13px] text-white backdrop-blur transition-transform duration-200 ease-out hover:-translate-y-0.5"
+              aria-label="Reset timer"
+            >
+              reset
+            </button>
+            <button
+              type="button"
+              onClick={() => setMinimized(true)}
+              className="font-helvetica cursor-pointer rounded-full bg-black/80 px-4 py-2 text-[13px] text-white backdrop-blur transition-transform duration-200 ease-out hover:-translate-y-0.5"
+              aria-label="Minimize timer"
+            >
+              minimize
+            </button>
+          </div>
 
           {/* Plain, fixed-color text - no card behind it, no color swap as blocks pass behind
               it (both tried and both read worse). Just a faint white halo so the digits stay
               readable once a block is directly behind them, without the text itself changing. */}
           <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
-            <p
-              className="font-nanum-pen text-[#0e0e0d]"
-              style={{ fontSize: "clamp(18px, 3vw, 24px)", textShadow: "0 0 6px rgba(255,255,255,0.6)" }}
-            >
-              {ended ? "time's up!" : "building ends in"}
-            </p>
+            {!ended && (
+              <p
+                className="font-nanum-pen text-[#0e0e0d]"
+                style={{ fontSize: "clamp(18px, 3vw, 24px)", textShadow: "0 0 6px rgba(255,255,255,0.6)" }}
+              >
+                building ends in
+              </p>
+            )}
             <p
               className="font-drowner leading-none text-[#0e0e0d]"
               style={{
@@ -259,7 +338,7 @@ export default function TimerApp() {
                 textShadow: "0 0 8px rgba(255,255,255,0.6)",
               }}
             >
-              {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+              {ended ? "time's up!" : `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`}
             </p>
             {ended && (
               <button
