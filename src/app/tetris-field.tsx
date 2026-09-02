@@ -45,7 +45,7 @@ const PARTICLE_LIFETIME_MS = 550;
 const DEATH_PARTICLE_COLORS = ["#e82803", "#100f0f", "#ea34df", "#ffd400"];
 const SPAWN_PARTICLE_COLORS = ["#ffffff", "#7dd3fc", "#fde68a", "#a7f3d0"];
 
-interface Placed {
+export interface Placed {
   col: number;
   /** Row index of the block's bottom edge, counted up from the floor. */
   bottom: number;
@@ -184,7 +184,7 @@ function mulberry32(seed: number) {
  * already in progress rather than a tidy wall. Entirely deterministic, so it's identical on every
  * render at a given size and never re-shuffles under the visitor.
  */
-function buildSkyline(columns: number, fillRows: number) {
+export function buildSkyline(columns: number, fillRows: number) {
   const blocks: Placed[] = [];
   const surface: number[] = new Array(columns).fill(0);
   const segments: number[] = [];
@@ -252,6 +252,17 @@ function buildSkyline(columns: number, fillRows: number) {
 
 /** Row a block starts its fall from - clear of the top of the screen. */
 const spawnRow = (rows: number) => rows + 3;
+
+/** A placed block's pixel box at a given cell size - shared with anything that lays out a
+ *  `Placed`/skyline block outside this component (see the timer page's progress board). */
+export function placeBlock({ col, bottom, shape }: Placed, cell: number, unit: number) {
+  return {
+    left: col * cell,
+    bottom: bottom * cell,
+    width: GEOMETRY[shape].width * unit,
+    height: GEOMETRY[shape].height * unit,
+  };
+}
 
 export default function TetrisField({
   targetCell,
@@ -776,12 +787,7 @@ export default function TetrisField({
   }, [columns, skyline, flooded]);
 
   const unit = cell / PITCH;
-  const place = ({ col, bottom, shape }: Placed) => ({
-    left: col * cell,
-    bottom: bottom * cell,
-    width: GEOMETRY[shape].width * unit,
-    height: GEOMETRY[shape].height * unit,
-  });
+  const place = (piece: Placed) => placeBlock(piece, cell, unit);
 
 
   return (
