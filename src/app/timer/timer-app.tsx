@@ -34,51 +34,106 @@ function minDateTimeLocal() {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
+const DURATION_PRESETS = [
+  { label: "15 min", ms: 15 * 60_000 },
+  { label: "30 min", ms: 30 * 60_000 },
+  { label: "1 hour", ms: 60 * 60_000 },
+  { label: "2 hours", ms: 2 * 60 * 60_000 },
+  { label: "4 hours", ms: 4 * 60 * 60_000 },
+] as const;
+
+function PresetButton({
+  selected,
+  onClick,
+  children,
+}: {
+  selected?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`font-nanum-pen cursor-pointer rounded-2xl border py-3 text-[17px] transition-all duration-150 ease-out hover:-translate-y-0.5 active:translate-y-0 ${
+        selected
+          ? "border-black bg-black text-white"
+          : "border-black/10 bg-white text-[#0e0e0d] hover:border-black/25 hover:shadow-md"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+// A picker built from two complementary paths rather than one form: most people building a
+// timer know roughly how *long* they're working, not the exact clock time it ends at - so
+// duration presets are the primary, one-tap path, with the native datetime-local picker tucked
+// behind "custom" for the rarer case of a precise end time.
 function SetupForm({ onStart }: { onStart: (endAt: number) => void }) {
+  const [customOpen, setCustomOpen] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <form
-      className="relative z-10 flex w-full max-w-[360px] flex-col items-center gap-5 px-6 text-center"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const endAt = value ? parseLocalDateTime(value) : null;
-        if (endAt === null || endAt <= Date.now()) {
-          setError("Pick a time in the future.");
-          return;
-        }
-        onStart(endAt);
-      }}
-    >
+    <div className="relative z-10 flex w-full max-w-[400px] flex-col items-center gap-6 px-6 text-center">
       <h1 className="font-drowner text-[#0e0e0d]" style={{ fontSize: "clamp(32px, 6vw, 48px)" }}>
         set a build timer
       </h1>
       <p className="font-helvetica text-[15px] leading-[1.5] text-[#33322f]">
-        Pick when you want to stop. The board fills in as the clock runs down.
+        Pick how long the build runs for. The board fills in as the clock runs down.
       </p>
-      <label className="flex w-full flex-col gap-2 text-left">
-        <span className="font-helvetica text-[13px] tracking-[0.04em] text-[#33322f] uppercase">ends at</span>
-        <input
-          type="datetime-local"
-          value={value}
-          min={minDateTimeLocal()}
-          onChange={(e) => {
-            setValue(e.target.value);
-            setError(null);
+
+      <div className="grid w-full grid-cols-3 gap-2.5">
+        {DURATION_PRESETS.map((preset) => (
+          <PresetButton key={preset.label} onClick={() => onStart(Date.now() + preset.ms)}>
+            {preset.label}
+          </PresetButton>
+        ))}
+        <PresetButton selected={customOpen} onClick={() => setCustomOpen((v) => !v)}>
+          custom
+        </PresetButton>
+      </div>
+
+      {customOpen && (
+        <form
+          className="flex w-full flex-col items-center gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const endAt = value ? parseLocalDateTime(value) : null;
+            if (endAt === null || endAt <= Date.now()) {
+              setError("Pick a time in the future.");
+              return;
+            }
+            onStart(endAt);
           }}
-          className="font-helvetica rounded-lg border border-black/15 bg-white px-4 py-3 text-[16px] text-[#0e0e0d]"
-          required
-        />
-      </label>
-      {error && <p className="font-helvetica text-[13px] text-[#e82803]">{error}</p>}
-      <button
-        type="submit"
-        className="font-nanum-pen w-full cursor-pointer rounded-full bg-black py-3 text-[20px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0.5"
-      >
-        start timer
-      </button>
-    </form>
+        >
+          <label className="flex w-full flex-col gap-2 text-left">
+            <span className="font-helvetica text-[13px] tracking-[0.04em] text-[#33322f] uppercase">ends at</span>
+            <input
+              type="datetime-local"
+              value={value}
+              min={minDateTimeLocal()}
+              onChange={(e) => {
+                setValue(e.target.value);
+                setError(null);
+              }}
+              className="font-helvetica w-full rounded-2xl border border-black/15 bg-white px-4 py-3.5 text-[17px] text-[#0e0e0d] shadow-sm outline-none transition-colors focus:border-black"
+              style={{ colorScheme: "light" }}
+              required
+              autoFocus
+            />
+          </label>
+          {error && <p className="font-helvetica text-[13px] text-[#e82803]">{error}</p>}
+          <button
+            type="submit"
+            className="font-nanum-pen w-full cursor-pointer rounded-full bg-black py-3 text-[20px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5 active:translate-y-0.5"
+          >
+            start timer
+          </button>
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -159,59 +214,65 @@ export default function TimerApp() {
     );
   }
 
-  if (minimized) {
-    return (
-      <section className="relative min-h-screen w-full overflow-hidden bg-white">
-        <MinimizedPill hours={hours} minutes={minutes} seconds={seconds} onExpand={() => setMinimized(false)} />
-      </section>
-    );
-  }
-
+  // The board itself (and its drop queue) stays mounted and running the whole time the timer is
+  // "running", minimized or not - minimizing only swaps which UI sits on top of it. Unmounting it
+  // on minimize would stop the fill (and reset its drop queue on the way back), which isn't what
+  // "minimize" should mean.
   return (
     <section className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-white">
-      <TimerBoard progress={progress} />
+      {/* Keyed on the timer's own start instant so a fresh timer (see "start another") remounts
+          a genuinely empty board, rather than reusing the previous one's internal fill state -
+          without this, the board's own size/columns often wouldn't have changed between timers,
+          so its "reset the fill" effect (keyed on that layout, not on which timer is running)
+          would never fire and the new run would start already showing the old one's full board. */}
+      <TimerBoard key={timer.startAt} progress={progress} remainingMs={remainingMs} />
       <TimerToast message={milestoneMessage} />
 
-      <button
-        type="button"
-        onClick={() => setMinimized(true)}
-        className="font-helvetica absolute top-6 right-6 z-20 cursor-pointer rounded-full bg-black/80 px-4 py-2 text-[13px] text-white backdrop-blur transition-transform duration-200 ease-out hover:-translate-y-0.5"
-        aria-label="Minimize timer"
-      >
-        minimize
-      </button>
-
-      <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
-        {/* The fill rises from the bottom, and this block sits vertically centred - so the
-            (lower) digits pass under it before the (higher) label does. Two thresholds rather
-            than one shared flag, so each line flips to white only once the board has actually
-            risen past *that* line, not whichever of the two is reached first. */}
-        <p
-          className="font-nanum-pen transition-colors duration-500"
-          style={{ fontSize: "clamp(18px, 3vw, 24px)", color: progress >= 0.62 ? "#ffffff" : "#0e0e0d" }}
-        >
-          {ended ? "time's up!" : "building ends in"}
-        </p>
-        <p
-          className="font-drowner leading-none transition-colors duration-500"
-          style={{
-            fontSize: "clamp(56px, 13vw, 140px)",
-            letterSpacing: "0.02em",
-            color: progress >= 0.48 ? "#ffffff" : "#0e0e0d",
-          }}
-        >
-          {pad(hours)}:{pad(minutes)}:{pad(seconds)}
-        </p>
-        {ended && (
+      {minimized ? (
+        <MinimizedPill hours={hours} minutes={minutes} seconds={seconds} onExpand={() => setMinimized(false)} />
+      ) : (
+        <>
           <button
             type="button"
-            onClick={resetTimer}
-            className="font-nanum-pen mt-2 cursor-pointer rounded-full bg-black px-6 py-2.5 text-[18px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5"
+            onClick={() => setMinimized(true)}
+            className="font-helvetica absolute top-6 right-6 z-20 cursor-pointer rounded-full bg-black/80 px-4 py-2 text-[13px] text-white backdrop-blur transition-transform duration-200 ease-out hover:-translate-y-0.5"
+            aria-label="Minimize timer"
           >
-            start another
+            minimize
           </button>
-        )}
-      </div>
+
+          {/* Plain, fixed-color text - no card behind it, no color swap as blocks pass behind
+              it (both tried and both read worse). Just a faint white halo so the digits stay
+              readable once a block is directly behind them, without the text itself changing. */}
+          <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
+            <p
+              className="font-nanum-pen text-[#0e0e0d]"
+              style={{ fontSize: "clamp(18px, 3vw, 24px)", textShadow: "0 0 6px rgba(255,255,255,0.6)" }}
+            >
+              {ended ? "time's up!" : "building ends in"}
+            </p>
+            <p
+              className="font-drowner leading-none text-[#0e0e0d]"
+              style={{
+                fontSize: "clamp(56px, 13vw, 140px)",
+                letterSpacing: "0.02em",
+                textShadow: "0 0 8px rgba(255,255,255,0.6)",
+              }}
+            >
+              {pad(hours)}:{pad(minutes)}:{pad(seconds)}
+            </p>
+            {ended && (
+              <button
+                type="button"
+                onClick={resetTimer}
+                className="font-nanum-pen mt-2 cursor-pointer rounded-full bg-black px-6 py-2.5 text-[18px] text-white transition-transform duration-200 ease-out hover:-translate-y-0.5"
+              >
+                start another
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </section>
   );
 }
