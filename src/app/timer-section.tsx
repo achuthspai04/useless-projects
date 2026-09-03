@@ -70,6 +70,10 @@ function remainingUntilEvent() {
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
 }
 
+function isEventLive() {
+  return Date.now() >= EVENT_START;
+}
+
 // Same target cell sizes the hero's own fields use, so the reveal's blocks come out the size
 // visitors have already seen on the way down (see page.tsx and mobile-hero.tsx).
 const DESKTOP_TARGET_CELL = 68;
@@ -88,7 +92,17 @@ const VENUES_HOLD_MS = 4500;
 // AnimatedElephant instances (as a plain top-taking function did before) let the CSS-hidden
 // breakpoint's independent, randomly-timed dragon flip the *visible* button's color out of sync
 // with the dragon actually on screen - hence a real component here, not a helper function.
-function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: boolean; onReveal: () => void }) {
+function CuriosityButton({
+  top,
+  revealed,
+  onReveal,
+  label,
+}: {
+  top: number;
+  revealed: boolean;
+  onReveal: () => void;
+  label: string;
+}) {
   const [isFiring, setIsFiring] = useState(false);
   // 0 = cold iron, 1 = fully hot. Driven by a rAF ramp below rather than snapping straight to a
   // fixed color, so the button visibly climbs through the same stages the dragon's fire would
@@ -152,7 +166,7 @@ function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: b
           color: heat > 0.55 ? "#241100" : "#ffffff",
         }}
       >
-        know when?
+        {label}
       </button>
     </div>
   );
@@ -162,11 +176,25 @@ export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
   // a server-computed countdown against a client one computed moments later.
   const [remaining, setRemaining] = useState<{ hours: number; minutes: number } | null>(null);
+  const [live, setLive] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [stage, setStage] = useState<"dates" | "venues" | null>(null);
 
   useEffect(() => {
     if (!revealed) return;
+    // Once the event is live, "know where?" has nothing to say about dates anymore - jump
+    // straight to the venue roster instead of running it through the dates stage first.
+    if (live) {
+      const toVenues = setTimeout(() => setStage("venues"), CARDS_IN_MS);
+      const toClose = setTimeout(() => {
+        setRevealed(false);
+        setStage(null);
+      }, CARDS_IN_MS + VENUES_HOLD_MS);
+      return () => {
+        clearTimeout(toVenues);
+        clearTimeout(toClose);
+      };
+    }
     const toDates = setTimeout(() => setStage("dates"), CARDS_IN_MS);
     const toVenues = setTimeout(() => setStage("venues"), CARDS_IN_MS + DATES_HOLD_MS);
     const toClose = setTimeout(() => {
@@ -178,11 +206,15 @@ export default function TimerSection() {
       clearTimeout(toVenues);
       clearTimeout(toClose);
     };
-  }, [revealed]);
+  }, [revealed, live]);
 
   useEffect(() => {
     setRemaining(remainingUntilEvent());
-    const id = setInterval(() => setRemaining(remainingUntilEvent()), UPDATE_INTERVAL_MS);
+    setLive(isEventLive());
+    const id = setInterval(() => {
+      setRemaining(remainingUntilEvent());
+      setLive(isEventLive());
+    }, UPDATE_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -211,10 +243,11 @@ export default function TimerSection() {
             lineHeight: "32px",
           }}
         >
-          making starts in
+          {live ? "happening across 8 venues today" : "making starts in"}
         </p>
 
-        {/* Hours stacked over minutes - Centered */}
+        {/* Hours stacked over minutes, or (once live) "it's live" - same primary font and size
+            either way, just swapping what fills the slot. */}
         <p
           className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
           style={{
@@ -225,7 +258,9 @@ export default function TimerSection() {
             letterSpacing: `${MOBILE_COUNTDOWN_TRACKING}px`,
           }}
         >
-          {remaining ? (
+          {live ? (
+            "it's live"
+          ) : remaining ? (
             <>
               {remaining.hours} hour
               <br />
@@ -236,7 +271,12 @@ export default function TimerSection() {
           )}
         </p>
 
-        <CuriosityButton top={330} revealed={revealed} onReveal={() => setRevealed(true)} />
+        <CuriosityButton
+          top={330}
+          revealed={revealed}
+          onReveal={() => setRevealed(true)}
+          label={live ? "know where?" : "know when?"}
+        />
       </div>
 
       <div
@@ -261,10 +301,11 @@ export default function TimerSection() {
             lineHeight: "42px",
           }}
         >
-          making starts in
+          {live ? "happening across 8 venues today" : "making starts in"}
         </p>
 
-        {/* Desktop timer digits - Centered */}
+        {/* Desktop timer digits, or (once live) "it's live" - same primary font and size either
+            way, just swapping what fills the slot. */}
         <p
           className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
           style={{
@@ -276,10 +317,15 @@ export default function TimerSection() {
             letterSpacing: "4.7265px",
           }}
         >
-          {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
+          {live ? "it's live" : remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
 
-        <CuriosityButton top={490} revealed={revealed} onReveal={() => setRevealed(true)} />
+        <CuriosityButton
+          top={490}
+          revealed={revealed}
+          onReveal={() => setRevealed(true)}
+          label={live ? "know where?" : "know when?"}
+        />
       </div>
 
       {/* Outside both scaled canvases so the board fills the real section rather than the design's
