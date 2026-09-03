@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { createSubmission } from "@/lib/airtable";
+import { revalidateTag } from "next/cache";
+import { createSubmission, submissionsTag } from "@/lib/airtable";
 import { CAMPUSES, getCompetition } from "@/lib/competitions";
 
-function isValidSubmissionLink(link: string) {
+function isValidSubmissionLink(link: string, allowedHosts: string[]) {
   try {
     const url = new URL(link);
     if (url.protocol !== "https:" && url.protocol !== "http:") return false;
     const host = url.hostname.replace(/^www\./, "");
-    return ["instagram.com", "youtube.com", "youtu.be"].includes(host);
+    return allowedHosts.includes(host);
   } catch {
     return false;
   }
@@ -21,10 +22,10 @@ export async function POST(request: Request) {
 
   const { slug, name, campus, link, notes } = body as Record<string, unknown>;
 
-  if (typeof slug !== "string" || !getCompetition(slug)) {
+  const competition = typeof slug === "string" ? getCompetition(slug) : undefined;
+  if (!competition || competition.autoJudged || !competition.airtableTableId || !competition.linkHosts || !competition.linkLabel) {
     return NextResponse.json({ error: "Unknown competition." }, { status: 400 });
   }
-  const competition = getCompetition(slug)!;
 
   if (typeof name !== "string" || name.trim().length < 2 || name.trim().length > 100) {
     return NextResponse.json({ error: "Enter your name." }, { status: 400 });
@@ -32,17 +33,16 @@ export async function POST(request: Request) {
   if (typeof campus !== "string" || !CAMPUSES.includes(campus as (typeof CAMPUSES)[number])) {
     return NextResponse.json({ error: "Select your campus." }, { status: 400 });
   }
-  if (typeof link !== "string" || !isValidSubmissionLink(link)) {
-    return NextResponse.json({ error: "Enter a valid Instagram or YouTube link." }, { status: 400 });
+  if (typeof link !== "string" || !isValidSubmissionLink(link, competition.linkHosts)) {
+    return NextResponse.json({ error: `Enter a valid ${competition.linkLabel}.` }, { status: 400 });
   }
   if (notes !== undefined && (typeof notes !== "string" || notes.length > 500)) {
     return NextResponse.json({ error: "Notes are too long." }, { status: 400 });
   }
 
   try {
-    await createSubmission({
+    await createSubmission(competition.airtableTableId, {
       Name: name.trim(),
-      Competition: competition.airtableChoice,
       Campus: campus,
       "Submission Link": link,
       ...(notes ? { Notes: notes } : {}),
@@ -51,6 +51,10 @@ export async function POST(request: Request) {
     console.error("Competition submission failed:", error);
     return NextResponse.json({ error: "Couldn't save your submission. Try again in a bit." }, { status: 502 });
   }
+
+  // Invalidate the cached read for this competition's table so /submissions shows the new entry
+  // right away, instead of waiting for the fallback revalidate window.
+  revalidateTag(submissionsTag(competition.airtableTableId), { expire: 0 });
 
   return NextResponse.json({ ok: true });
 }

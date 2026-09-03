@@ -56,6 +56,11 @@ const MOBILE_COUNTDOWN_SIZE = 90;
 // The same 0.04em the desktop countdown uses (4.7265 / 118.163).
 const MOBILE_COUNTDOWN_TRACKING = MOBILE_COUNTDOWN_SIZE * 0.04;
 const MOBILE_DOT_SIZE = 34.52;
+// Actual rendered height of one line vs. the two-line ("X hour" / "Y min") stack, at the
+// countdown's line-height - everything on this canvas is absolutely positioned with a fixed
+// top, not laid out in flow, so the button below has to pick its own top based on which of these
+// the text is actually showing rather than assuming a box height will push it down.
+const MOBILE_COUNTDOWN_LINE_HEIGHT = MOBILE_COUNTDOWN_SIZE * 1.05;
 
 const DOT_ASSETS = ["/why-dot.svg", "/hero-dot-1.svg", "/hero-dot-2.svg", "/hero-dot-3.svg", "/hero-dot-4.svg"] as const;
 
@@ -68,6 +73,10 @@ function remainingUntilEvent() {
   const diffMs = Math.max(0, EVENT_START - Date.now());
   const totalMinutes = Math.floor(diffMs / 60_000);
   return { hours: Math.floor(totalMinutes / 60), minutes: totalMinutes % 60 };
+}
+
+function isEventLive() {
+  return Date.now() >= EVENT_START;
 }
 
 // Same target cell sizes the hero's own fields use, so the reveal's blocks come out the size
@@ -86,7 +95,24 @@ const CARDS_HOLD_MS = 3000;
 // AnimatedElephant instances (as a plain top-taking function did before) let the CSS-hidden
 // breakpoint's independent, randomly-timed dragon flip the *visible* button's color out of sync
 // with the dragon actually on screen - hence a real component here, not a helper function.
-function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: boolean; onReveal: () => void }) {
+function CuriosityButton({
+  top,
+  revealed,
+  onReveal,
+  label,
+  centerOffset = 0,
+}: {
+  top: number;
+  revealed: boolean;
+  onReveal: () => void;
+  label: string;
+  // The elephant perches outside the button's own 180px box (positioned via the child's `right`
+  // offset below, not by taking up space in it), so centering just the box leaves the actual
+  // elephant+button cluster looking shifted left - most visible on the mobile canvas, where the
+  // ~27px of elephant hanging off the left edge is a much bigger fraction of the screen than on
+  // desktop. This nudges the box right by that same amount so the whole cluster reads as centered.
+  centerOffset?: number;
+}) {
   const [isFiring, setIsFiring] = useState(false);
   // 0 = cold iron, 1 = fully hot. Driven by a rAF ramp below rather than snapping straight to a
   // fixed color, so the button visibly climbs through the same stages the dragon's fire would
@@ -119,10 +145,10 @@ function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: b
 
   return (
     <div
-      className={`absolute left-1/2 -translate-x-1/2 transition-opacity duration-200 ${
+      className={`absolute -translate-x-1/2 transition-opacity duration-200 ${
         revealed ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
-      style={{ top: `${top}px`, width: "180px", height: "48px" }}
+      style={{ top: `${top}px`, left: `calc(50% + ${centerOffset}px)`, width: "180px", height: "48px" }}
     >
       {/* Perches just left of the button, breathing fire at its own idle/burst rhythm - the
           button's color is driven off the same burst via onBurstChange rather than re-timed
@@ -150,7 +176,7 @@ function CuriosityButton({ top, revealed, onReveal }: { top: number; revealed: b
           color: heat > 0.55 ? "#241100" : "#ffffff",
         }}
       >
-        know when?
+        {label}
       </button>
     </div>
   );
@@ -160,6 +186,7 @@ export default function TimerSection() {
   // Left null through the initial (server-matching) render so hydration never has to reconcile
   // a server-computed countdown against a client one computed moments later.
   const [remaining, setRemaining] = useState<{ hours: number; minutes: number } | null>(null);
+  const [live, setLive] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [showCards, setShowCards] = useState(false);
 
@@ -178,7 +205,11 @@ export default function TimerSection() {
 
   useEffect(() => {
     setRemaining(remainingUntilEvent());
-    const id = setInterval(() => setRemaining(remainingUntilEvent()), UPDATE_INTERVAL_MS);
+    setLive(isEventLive());
+    const id = setInterval(() => {
+      setRemaining(remainingUntilEvent());
+      setLive(isEventLive());
+    }, UPDATE_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
 
@@ -207,10 +238,11 @@ export default function TimerSection() {
             lineHeight: "32px",
           }}
         >
-          making starts in
+          {live ? "happening across 8 venues today" : "making starts in"}
         </p>
 
-        {/* Hours stacked over minutes - Centered */}
+        {/* Hours stacked over minutes, or (once live) "it's live" - same primary font and size
+            either way, just swapping what fills the slot. */}
         <p
           className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
           style={{
@@ -221,7 +253,9 @@ export default function TimerSection() {
             letterSpacing: `${MOBILE_COUNTDOWN_TRACKING}px`,
           }}
         >
-          {remaining ? (
+          {live ? (
+            "it's live"
+          ) : remaining ? (
             <>
               {remaining.hours} hour
               <br />
@@ -232,7 +266,15 @@ export default function TimerSection() {
           )}
         </p>
 
-        <CuriosityButton top={330} revealed={revealed} onReveal={() => setRevealed(true)} />
+        <CuriosityButton
+          // 115 (countdown top) + however many lines it's actually showing right now + 32px
+          // breathing room - stays close under the text whether that's one line ("it's live")
+          // or the two-line hour/min stack, instead of always leaving room for both.
+          top={115 + MOBILE_COUNTDOWN_LINE_HEIGHT * (live ? 1 : 2) + 32}
+          revealed={revealed}
+          onReveal={() => setRevealed(true)}
+          label={live ? "know where?" : "know when?"}
+        />
       </div>
 
       <div
@@ -257,10 +299,11 @@ export default function TimerSection() {
             lineHeight: "42px",
           }}
         >
-          making starts in
+          {live ? "happening across 8 venues today" : "making starts in"}
         </p>
 
-        {/* Desktop timer digits - Centered */}
+        {/* Desktop timer digits, or (once live) "it's live" - same primary font and size either
+            way, just swapping what fills the slot. */}
         <p
           className="font-drowner absolute left-1/2 -translate-x-1/2 text-center text-black"
           style={{
@@ -272,10 +315,15 @@ export default function TimerSection() {
             letterSpacing: "4.7265px",
           }}
         >
-          {remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
+          {live ? "it's live" : remaining ? `${remaining.hours} hour ${remaining.minutes} min` : " "}
         </p>
 
-        <CuriosityButton top={490} revealed={revealed} onReveal={() => setRevealed(true)} />
+        <CuriosityButton
+          top={490}
+          revealed={revealed}
+          onReveal={() => setRevealed(true)}
+          label={live ? "know where?" : "know when?"}
+        />
       </div>
 
       {/* Outside both scaled canvases so the board fills the real section rather than the design's

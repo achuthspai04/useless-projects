@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CAMPUSES } from "@/lib/competitions";
+import { CAMPUSES, type Competition } from "@/lib/competitions";
 
 const INPUT_CLASS =
   "font-helvetica w-full rounded-xl border border-black/10 bg-white px-4 py-3 text-[15px] text-[#0e0e0d] outline-none transition-colors focus:border-[#ea34df]";
 
-export default function SubmissionForm({ slug }: { slug: string }) {
+export default function SubmissionForm({ competition }: { competition: Competition }) {
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
   const [error, setError] = useState("");
 
@@ -17,7 +17,7 @@ export default function SubmissionForm({ slug }: { slug: string }) {
 
     const form = new FormData(e.currentTarget);
     const payload = {
-      slug,
+      slug: competition.slug,
       name: form.get("name"),
       campus: form.get("campus"),
       link: form.get("link"),
@@ -76,15 +76,13 @@ export default function SubmissionForm({ slug }: { slug: string }) {
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="font-helvetica text-[13px] tracking-[0.04em] text-[#33322f] uppercase">
-          Instagram or YouTube link
-        </span>
+        <span className="font-helvetica text-[13px] tracking-[0.04em] text-[#33322f] uppercase">{competition.linkLabel}</span>
         <input
           name="link"
           type="url"
           required
           className={INPUT_CLASS}
-          placeholder="https://instagram.com/reel/..."
+          placeholder={competition.linkPlaceholder}
         />
       </label>
 
