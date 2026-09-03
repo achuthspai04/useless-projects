@@ -45,7 +45,7 @@ type Block =
   | { kind: "gallery"; items: { title: string; text: string; image?: string }[] }
   | { kind: "embeds"; items: { title: string; permalink: string }[] }
   | { kind: "video"; youtubeId: string; title: string }
-  | { kind: "prizes"; items: { label: string; text?: string; locked?: boolean; image?: string; imageScale?: number }[]; size?: "sm" | "lg" }
+  | { kind: "prizes"; items: { label: string; text?: string; locked?: boolean; image?: string; imageScale?: number; slug?: string }[]; size?: "sm" | "lg" }
   | { kind: "creatures"; items: { label: string; image: string; hoverFrames?: string[] }[] };
 
 type Section = {
@@ -256,7 +256,7 @@ const SECTIONS: Section[] = [
         kind: "prizes",
         size: "sm",
         items: [
-          { label: "best build video documentary", image: "/handbook/video.png" },
+          { label: "best build video documentary", image: "/handbook/video.png", slug: "best-build-video-documentary" },
           { label: "", locked: true },
           { label: "", locked: true },
         ],
@@ -363,6 +363,7 @@ function PrizeMedal({
   locked = false,
   image,
   imageScale = 1.2,
+  slug,
 }: {
   label: string;
   text?: string;
@@ -370,6 +371,7 @@ function PrizeMedal({
   locked?: boolean;
   image?: string;
   imageScale?: number;
+  slug?: string;
 }) {
   const svgSize = size === "lg" ? 112 : 76;
   const boxWidth = size === "lg" ? 140 : 100;
@@ -378,50 +380,66 @@ function PrizeMedal({
   // so the label underneath lines up across a row even when a badge image scales larger than
   // the medal it's standing in for.
   const slotHeight = size === "lg" ? 150 : 145;
-  return (
-    <li className="relative flex flex-col items-center gap-2 text-center" style={{ width: `${boxWidth}px` }}>
-      <div className={locked ? "flex flex-col items-center gap-2 blur-[3px] opacity-40 select-none" : "flex flex-col items-center gap-2"}>
-        <div className="flex items-center justify-center" style={{ height: slotHeight }}>
-          {image ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={image}
-              alt=""
-              aria-hidden="true"
-              className="max-w-none object-contain"
-              style={{ width: imageSize, height: imageSize }}
-            />
-          ) : (
-            <svg viewBox="0 0 100 108" width={svgSize} height={svgSize * 1.08} aria-hidden="true">
-              <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
-              <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
-              <path d={SEAL_PATH} fill="#ea34df" />
-              <circle cx="50" cy="42" r="28" fill="#fff" />
-              <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
-              <text
-                x="50"
-                y="53"
-                textAnchor="middle"
-                fontSize="30"
-                fill="#ea34df"
-                style={{ fontFamily: "var(--font-drowner)" }}
-              >
-                ★
-              </text>
-            </svg>
-          )}
-        </div>
-        <span className={`font-nanum-pen leading-[1.1] text-[#0e0e0d] ${size === "lg" ? "text-[20px]" : "text-[15px]"}`}>
-          {label}
-        </span>
-        {text && (
-          <span
-            className={`font-helvetica leading-[1.4] text-[#33322f] ${size === "lg" ? "text-[13px]" : "text-[11px]"}`}
-          >
-            {text}
-          </span>
+  const medal = (
+    <>
+      <div className="flex items-center justify-center" style={{ height: slotHeight }}>
+        {image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt=""
+            aria-hidden="true"
+            className="max-w-none object-contain"
+            style={{ width: imageSize, height: imageSize }}
+          />
+        ) : (
+          <svg viewBox="0 0 100 108" width={svgSize} height={svgSize * 1.08} aria-hidden="true">
+            <path d="M38,72 L28,104 L50,90 Z" fill="#1b352a" />
+            <path d="M62,72 L72,104 L50,90 Z" fill="#244638" />
+            <path d={SEAL_PATH} fill="#ea34df" />
+            <circle cx="50" cy="42" r="28" fill="#fff" />
+            <circle cx="50" cy="42" r="28" fill="none" stroke="#ea34df" strokeWidth="2" strokeDasharray="3 3.5" />
+            <text
+              x="50"
+              y="53"
+              textAnchor="middle"
+              fontSize="30"
+              fill="#ea34df"
+              style={{ fontFamily: "var(--font-drowner)" }}
+            >
+              ★
+            </text>
+          </svg>
         )}
       </div>
+      <span className={`font-nanum-pen leading-[1.1] text-[#0e0e0d] ${size === "lg" ? "text-[20px]" : "text-[15px]"}`}>
+        {label}
+      </span>
+      {text && (
+        <span
+          className={`font-helvetica leading-[1.4] text-[#33322f] ${size === "lg" ? "text-[13px]" : "text-[11px]"}`}
+        >
+          {text}
+        </span>
+      )}
+      {slug && !locked && (
+        <span className="font-helvetica text-[11px] tracking-[0.04em] text-[#ea34df] underline decoration-2 underline-offset-4">
+          click here to submit &amp; know more
+        </span>
+      )}
+    </>
+  );
+  return (
+    <li className="relative flex flex-col items-center gap-2 text-center" style={{ width: `${boxWidth}px` }}>
+      {slug && !locked ? (
+        <Link href={`/competitions/${slug}`} className="flex flex-col items-center gap-2 transition-transform hover:scale-[1.04]">
+          {medal}
+        </Link>
+      ) : (
+        <div className={locked ? "flex flex-col items-center gap-2 blur-[3px] opacity-40 select-none" : "flex flex-col items-center gap-2"}>
+          {medal}
+        </div>
+      )}
       {locked && (
         <span className="font-helvetica absolute inset-0 flex items-center justify-center text-[11px] tracking-[0.08em] text-[#33322f] uppercase">
           to be unlocked
@@ -471,7 +489,7 @@ function Blocks({ blocks }: { blocks: Block[] }) {
           return (
             <ul key={i} className="flex flex-wrap justify-center gap-x-6 gap-y-8 py-2 sm:justify-start">
               {block.items.map((item, itemIndex) => (
-                <PrizeMedal key={`${item.label}-${itemIndex}`} label={item.label} text={item.text} size={block.size} locked={item.locked} image={item.image} imageScale={item.imageScale} />
+                <PrizeMedal key={`${item.label}-${itemIndex}`} label={item.label} text={item.text} size={block.size} locked={item.locked} image={item.image} imageScale={item.imageScale} slug={item.slug} />
               ))}
             </ul>
           );
@@ -747,10 +765,15 @@ export default function HandbookPage() {
   return (
     // data-page is what turns the root layout's mandatory scroll snapping off for this route - see
     // globals.css. The home page is a deck of full-screen panels; this is a document.
-    // overflow-x-hidden guards against the page's decorative bits - fanned/rotated card piles,
+    // overflow-x-clip guards against the page's decorative bits - fanned/rotated card piles,
     // the full-size hover-preview popups, the overlapping creature crowd - pushing the document
     // wider than the viewport on narrow screens and introducing an unwanted horizontal scrollbar.
-    <main data-page="handbook" className="w-full overflow-x-hidden bg-white text-[#0e0e0d]">
+    // Uses `clip` rather than `hidden`: `overflow-x-hidden` alone forces the other axis to
+    // `auto` per spec, turning this element into a scroll container - which breaks the sidebar
+    // nav's `position: sticky` below (sticky elements stick to their nearest scrolling ancestor,
+    // not the viewport, once one exists). `clip` achieves the same visual clipping without
+    // creating that scroll container.
+    <main data-page="handbook" className="w-full overflow-x-clip bg-white text-[#0e0e0d]">
       <div className="mx-auto w-full max-w-[1120px] px-5 sm:px-8 lg:px-10">
         <header className="relative flex flex-col gap-6 border-b border-black/10 py-14 sm:py-20">
           {/* Flex-centered against the heading rather than absolutely positioned with a guessed
