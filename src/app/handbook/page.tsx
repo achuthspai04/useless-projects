@@ -238,8 +238,8 @@ const SECTIONS: Section[] = [
         kind: "prizes",
         size: "lg",
         items: [
-          { label: "top 25 makers", text: "The 25 highest-scoring makers get a monthly scholarship worth up to ₹5 lakh.", image: "/handbook/5l.png" },
-          { label: "top 50 projects", text: "The 50 highest-scoring projects get a showcase slot at Maker Fair Kochi.", image: "/handbook/MF_Kochi_Logo_square.png", imageScale: 1.05 },
+          { label: "top 25 makers", text: "The 25 highest-scoring makers get a monthly scholarship from a total pool of ₹5 lakh.", image: "/handbook/5l.png" },
+          { label: "top 50 projects", text: "The 50 highest-scoring projects get a showcase slot at Maker Faire Kochi.", image: "/handbook/MF_Kochi_Logo_square.png", imageScale: 1.05 },
           { label: "goodies bag", text: "Selected participants take home a goodies bag.", image: "/handbook/goodie-bag.png" },
           { label: "mentorship & learning access", text: "Selected participants get mentorship from industry experts and access to exclusive learning programs.", image: "/handbook/teachign.png" },
         ],
