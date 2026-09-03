@@ -85,9 +85,11 @@ const DESKTOP_TARGET_CELL = 68;
 const MOBILE_TARGET_CELL = 22;
 
 // The reveal runs itself: the board fills, the dates land on it once those blocks have settled
-// (animate-lego-pop is 200ms), they hold for a beat, and then the section comes back.
+// (animate-lego-pop is 200ms), they hold for a beat, the venue roster takes their place for a
+// longer beat (enough time to actually hover a few tiles), and then the section comes back.
 const CARDS_IN_MS = 320;
-const CARDS_HOLD_MS = 3000;
+const DATES_HOLD_MS = 3000;
+const VENUES_HOLD_MS = 4500;
 
 // The button sits inside each breakpoint's own scaled canvas (mobile and desktop render both,
 // toggling visibility with CSS rather than mounting/unmounting - see TimerSection below), so each
@@ -188,20 +190,35 @@ export default function TimerSection() {
   const [remaining, setRemaining] = useState<{ hours: number; minutes: number } | null>(null);
   const [live, setLive] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const [showCards, setShowCards] = useState(false);
+  const [stage, setStage] = useState<"dates" | "venues" | null>(null);
 
   useEffect(() => {
     if (!revealed) return;
-    const toCards = setTimeout(() => setShowCards(true), CARDS_IN_MS);
+    // Once the event is live, "know where?" has nothing to say about dates anymore - jump
+    // straight to the venue roster instead of running it through the dates stage first.
+    if (live) {
+      const toVenues = setTimeout(() => setStage("venues"), CARDS_IN_MS);
+      const toClose = setTimeout(() => {
+        setRevealed(false);
+        setStage(null);
+      }, CARDS_IN_MS + VENUES_HOLD_MS);
+      return () => {
+        clearTimeout(toVenues);
+        clearTimeout(toClose);
+      };
+    }
+    const toDates = setTimeout(() => setStage("dates"), CARDS_IN_MS);
+    const toVenues = setTimeout(() => setStage("venues"), CARDS_IN_MS + DATES_HOLD_MS);
     const toClose = setTimeout(() => {
       setRevealed(false);
-      setShowCards(false);
-    }, CARDS_IN_MS + CARDS_HOLD_MS);
+      setStage(null);
+    }, CARDS_IN_MS + DATES_HOLD_MS + VENUES_HOLD_MS);
     return () => {
-      clearTimeout(toCards);
+      clearTimeout(toDates);
+      clearTimeout(toVenues);
       clearTimeout(toClose);
     };
-  }, [revealed]);
+  }, [revealed, live]);
 
   useEffect(() => {
     setRemaining(remainingUntilEvent());
@@ -340,7 +357,9 @@ export default function TimerSection() {
               targetCell={MOBILE_TARGET_CELL}
               cardCols={4}
               cardRows={6}
-              showCards={showCards}
+              venueCardCols={2}
+              venueCardRows={2}
+              stage={stage}
             />
           </div>
           <div className="absolute inset-0 z-[60] hidden lg:block">
@@ -348,7 +367,9 @@ export default function TimerSection() {
               targetCell={DESKTOP_TARGET_CELL}
               cardCols={2}
               cardRows={3}
-              showCards={showCards}
+              venueCardCols={1}
+              venueCardRows={1}
+              stage={stage}
             />
           </div>
         </>
