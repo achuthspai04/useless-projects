@@ -747,10 +747,15 @@ export default function HandbookPage() {
   return (
     // data-page is what turns the root layout's mandatory scroll snapping off for this route - see
     // globals.css. The home page is a deck of full-screen panels; this is a document.
-    // overflow-x-hidden guards against the page's decorative bits - fanned/rotated card piles,
+    // overflow-x-clip guards against the page's decorative bits - fanned/rotated card piles,
     // the full-size hover-preview popups, the overlapping creature crowd - pushing the document
     // wider than the viewport on narrow screens and introducing an unwanted horizontal scrollbar.
-    <main data-page="handbook" className="w-full overflow-x-hidden bg-white text-[#0e0e0d]">
+    // Uses `clip` rather than `hidden`: `overflow-x-hidden` alone forces the other axis to
+    // `auto` per spec, turning this element into a scroll container - which breaks the sidebar
+    // nav's `position: sticky` below (sticky elements stick to their nearest scrolling ancestor,
+    // not the viewport, once one exists). `clip` achieves the same visual clipping without
+    // creating that scroll container.
+    <main data-page="handbook" className="w-full overflow-x-clip bg-white text-[#0e0e0d]">
       <div className="mx-auto w-full max-w-[1120px] px-5 sm:px-8 lg:px-10">
         <header className="relative flex flex-col gap-6 border-b border-black/10 py-14 sm:py-20">
           {/* Flex-centered against the heading rather than absolutely positioned with a guessed
