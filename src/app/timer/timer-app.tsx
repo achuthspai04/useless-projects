@@ -17,7 +17,7 @@ import { MorphingText } from "@/components/ui/liquid-text";
 // value actually reaches the screen, the real countdown has moved on that much further, and
 // handing off to the live, still-ticking clock underneath makes the counter visibly skip forward
 // by that same amount. Predicting ahead is what makes the two actually line up.
-const BRAND_INTERLUDE_INTERVAL_MS = 12_000;
+const BRAND_INTERLUDE_INTERVAL_MS = 20_000;
 const MORPH_PASS_MS = 2000;
 const BRAND_INTERLUDE_DURATION_MS = MORPH_PASS_MS * 2;
 // liquid-text.tsx's cooldownTime (0.5s) is how long a MorphingText holds still on a settled text
