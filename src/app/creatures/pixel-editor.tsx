@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { PALETTE } from "./palette";
 
@@ -8,10 +8,11 @@ const GRID_SIZE = 16;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 
 export default function PixelEditor() {
+  const router = useRouter();
   const [pixels, setPixels] = useState<(string | null)[]>(() => Array(CELL_COUNT).fill(null));
   const [color, setColor] = useState<string | null>(PALETTE[0]);
   const [name, setName] = useState("");
-  const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [error, setError] = useState("");
   const paintingRef = useRef(false);
 
@@ -69,25 +70,12 @@ export default function PixelEditor() {
         setStatus("error");
         return;
       }
-      setStatus("done");
+      // Straight to the gallery - no separate "released!" screen to click past first.
+      router.push("/creatures/gallery");
     } catch {
       setError("Couldn't reach the server. Check your connection and try again.");
       setStatus("error");
     }
-  }
-
-  if (status === "done") {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-black/5 bg-[#244638]/5 p-6 text-center">
-        <p className="font-nanum-pen text-[22px] leading-[1.3] text-[#244638]">Your creature is loose in the wild.</p>
-        <Link
-          href="/creatures/gallery"
-          className="font-helvetica rounded-full bg-[#0e0e0d] px-5 py-2.5 text-[13px] tracking-[0.08em] text-white uppercase transition-transform hover:scale-105"
-        >
-          See the gallery
-        </Link>
-      </div>
-    );
   }
 
   return (
