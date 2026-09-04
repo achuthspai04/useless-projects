@@ -41,10 +41,9 @@ export default async function GalleryPage() {
 
         {/* Bounded and centered so the cluster starts in the middle of the visible screen - as
             more creatures pile on and the spiral grows past this box, the overflow is clipped
-            rather than blowing out the page's width or height (especially on mobile). Padding on
-            the bottom only nudges that center upward, clear of the fixed banner below. */}
+            rather than blowing out the page's width or height (especially on mobile). */}
         <div className="relative min-h-[60vh] flex-1 overflow-hidden">
-          <div className="absolute inset-0 flex items-center justify-center pb-20 sm:pb-24">
+          <div className="absolute inset-0 flex items-center justify-center">
             <LiveCreatureSwarm />
           </div>
         </div>

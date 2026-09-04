@@ -17,15 +17,17 @@ export default async function DrawHereBanner() {
   });
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex items-center justify-center gap-4 border-t border-black/10 bg-white/95 px-5 py-3 backdrop-blur sm:gap-6 sm:py-4">
+    // A small corner card rather than a full-width bar - it needs to stay legible from across a
+    // room when this is up on a display, but shouldn't eat into the gallery's own space or sit
+    // over the crowd of creatures piling toward the center.
+    <div className="fixed right-4 bottom-4 z-50 flex flex-col items-center gap-1.5 rounded-2xl border border-black/10 bg-white/95 p-3 text-center shadow-lg backdrop-blur sm:right-6 sm:bottom-6 sm:gap-2 sm:p-4">
       <div
-        className="size-16 shrink-0 overflow-hidden rounded-md sm:size-20 [&_svg]:block [&_svg]:h-full [&_svg]:w-full"
+        className="size-20 shrink-0 overflow-hidden rounded-md sm:size-28 [&_svg]:block [&_svg]:h-full [&_svg]:w-full"
         dangerouslySetInnerHTML={{ __html: qrSvg }}
       />
-      <p className="font-nanum-pen text-[18px] leading-[1.25] text-[#0e0e0d] sm:text-[24px]">
-        draw yours - scan the QR
-        <br className="sm:hidden" /> or go to{" "}
-        <span className="font-helvetica font-bold whitespace-nowrap">useless.tinkerhub.org/creatures</span>
+      <p className="font-nanum-pen text-[14px] leading-[1.15] text-[#0e0e0d] sm:text-[18px]">draw yours</p>
+      <p className="font-helvetica text-[9px] leading-tight font-bold whitespace-nowrap text-[#0e0e0d] sm:text-[11px]">
+        useless.tinkerhub.org/creatures
       </p>
     </div>
   );
