@@ -3,6 +3,13 @@ import { addCreature, CELL_COUNT } from "@/lib/creatures";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
+// Keeps the gallery from filling up with plain solid-color rectangles (the path of least
+// resistance if there's no floor at all) - a real creature takes a few more pixels and more than
+// one color to make. Checked server-side since the editor's own version of this is just UX; a
+// direct API call could otherwise skip it entirely.
+const MIN_FILLED_PIXELS = 10;
+const MIN_COLORS = 2;
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
@@ -21,8 +28,15 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json({ error: "Invalid pixel data." }, { status: 400 });
   }
-  if (pixels.every((p) => p === null)) {
+  const filled = (pixels as (string | null)[]).filter((p): p is string => p !== null);
+  if (filled.length === 0) {
     return NextResponse.json({ error: "Draw something first." }, { status: 400 });
+  }
+  if (filled.length < MIN_FILLED_PIXELS) {
+    return NextResponse.json({ error: "Draw a bit more before releasing it." }, { status: 400 });
+  }
+  if (new Set(filled).size < MIN_COLORS) {
+    return NextResponse.json({ error: "Use at least two colors - no solid-color blocks." }, { status: 400 });
   }
 
   try {

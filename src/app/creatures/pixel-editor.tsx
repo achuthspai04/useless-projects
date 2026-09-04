@@ -6,6 +6,12 @@ import { PALETTE } from "./palette";
 const GRID_SIZE = 16;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 
+// Mirrors the server-side check in api/creatures/submit/route.ts - this copy only saves a round
+// trip for an obviously-invalid drawing (a solid block, or a couple of stray pixels); the API
+// route is what actually enforces it.
+const MIN_FILLED_PIXELS = 10;
+const MIN_COLORS = 2;
+
 export default function PixelEditor() {
   const [pixels, setPixels] = useState<(string | null)[]>(() => Array(CELL_COUNT).fill(null));
   const [color, setColor] = useState<string | null>(PALETTE[0]);
@@ -48,8 +54,19 @@ export default function PixelEditor() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (pixels.every((p) => p === null)) {
+    const filled = pixels.filter((p): p is string => p !== null);
+    if (filled.length === 0) {
       setError("Draw something first.");
+      setStatus("error");
+      return;
+    }
+    if (filled.length < MIN_FILLED_PIXELS) {
+      setError("Draw a bit more before releasing it.");
+      setStatus("error");
+      return;
+    }
+    if (new Set(filled).size < MIN_COLORS) {
+      setError("Use at least two colors - no solid-color blocks.");
       setStatus("error");
       return;
     }
@@ -93,6 +110,10 @@ export default function PixelEditor() {
           <div key={i} data-index={i} style={{ backgroundColor: cell ?? "#ffffff" }} className="border border-black/5" />
         ))}
       </div>
+
+      <p className="font-helvetica text-[11px] tracking-[0.04em] text-[#33322f]/70 uppercase">
+        use at least two colors - no solid blocks
+      </p>
 
       <div className="flex flex-wrap items-center justify-center gap-2">
         {PALETTE.map((c) => (
