@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { addCreature, areCreatureSubmissionsClosed, countCreaturesForDevice, CELL_COUNT } from "@/lib/creatures";
+import { clientIp, isRateLimited } from "@/lib/rate-limit";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
@@ -17,9 +18,18 @@ const MIN_COLORS = 2;
 const MAX_PER_DEVICE = 2;
 const DEVICE_ID_PATTERN = /^[a-zA-Z0-9-]{1,100}$/;
 
+// Backstop against the device cap above, which only trusts a client-supplied id and is trivially
+// dodged by clearing storage or calling this route directly - an IP can't submit more than this
+// many times an hour no matter how many device ids it sends.
+const MAX_PER_IP_PER_HOUR = 6;
+
 export async function POST(request: Request) {
   if (await areCreatureSubmissionsClosed()) {
     return NextResponse.json({ error: "Submissions are closed right now." }, { status: 403 });
+  }
+
+  if (isRateLimited(`creature-submit:${clientIp(request)}`, MAX_PER_IP_PER_HOUR, 60 * 60 * 1000)) {
+    return NextResponse.json({ error: "Too many creatures from here - try again later." }, { status: 429 });
   }
 
   const body = await request.json().catch(() => null);
