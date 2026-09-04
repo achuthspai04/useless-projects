@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { addCreature, areCreatureSubmissionsClosed, countCreaturesForDevice, CELL_COUNT } from "@/lib/creatures";
 import { clientIp, isRateLimited } from "@/lib/rate-limit";
+import { isRequestTooLarge } from "@/lib/request-guards";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
@@ -23,7 +24,15 @@ const DEVICE_ID_PATTERN = /^[a-zA-Z0-9-]{1,100}$/;
 // many times an hour no matter how many device ids it sends.
 const MAX_PER_IP_PER_HOUR = 6;
 
+// A real payload here (256 pixels plus a short name and device id) runs a couple of KB - well
+// clear of this, so it only ever rejects something that couldn't be a genuine submission anyway.
+const MAX_BODY_BYTES = 8 * 1024;
+
 export async function POST(request: Request) {
+  if (isRequestTooLarge(request, MAX_BODY_BYTES)) {
+    return NextResponse.json({ error: "Request too large." }, { status: 413 });
+  }
+
   if (await areCreatureSubmissionsClosed()) {
     return NextResponse.json({ error: "Submissions are closed right now." }, { status: 403 });
   }
