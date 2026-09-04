@@ -12,6 +12,26 @@ const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 const MIN_FILLED_PIXELS = 10;
 const MIN_COLORS = 2;
 
+const DEVICE_ID_KEY = "creature-device-id";
+
+// There's no login here, so the submit route's per-visitor cap (2 creatures) is enforced against
+// this anonymous id instead - generated once and kept in localStorage, so it survives reloads but
+// not clearing storage or switching devices/browsers. That's a deliberate soft cap, not a real
+// identity check.
+function getDeviceId(): string {
+  try {
+    const existing = localStorage.getItem(DEVICE_ID_KEY);
+    if (existing) return existing;
+    const id = crypto.randomUUID();
+    localStorage.setItem(DEVICE_ID_KEY, id);
+    return id;
+  } catch {
+    // Storage blocked (private browsing, etc.) - fall back to a per-submit id rather than
+    // failing outright. It just means the cap can't track this visitor across page loads.
+    return crypto.randomUUID();
+  }
+}
+
 export default function PixelEditor() {
   const [pixels, setPixels] = useState<(string | null)[]>(() => Array(CELL_COUNT).fill(null));
   const [color, setColor] = useState<string | null>(PALETTE[0]);
@@ -77,7 +97,7 @@ export default function PixelEditor() {
       const res = await fetch("/api/creatures/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, pixels }),
+        body: JSON.stringify({ name, pixels, deviceId: getDeviceId() }),
       });
       const data = await res.json();
       if (!res.ok) {

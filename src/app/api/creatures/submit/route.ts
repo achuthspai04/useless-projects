@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addCreature, CELL_COUNT } from "@/lib/creatures";
+import { addCreature, countCreaturesForDevice, CELL_COUNT } from "@/lib/creatures";
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
@@ -10,16 +10,26 @@ const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const MIN_FILLED_PIXELS = 10;
 const MIN_COLORS = 2;
 
+// One browser gets 2 creatures. There's no login here, so "one browser" is a per-visitor id the
+// editor generates and keeps in localStorage (see pixel-editor.tsx) - easy enough to dodge by
+// clearing storage or using another device, but this is a soft cap against one enthusiastic
+// visitor filling the gallery, not a security boundary.
+const MAX_PER_DEVICE = 2;
+const DEVICE_ID_PATTERN = /^[a-zA-Z0-9-]{1,100}$/;
+
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (!body || typeof body !== "object") {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const { name, pixels } = body as Record<string, unknown>;
+  const { name, pixels, deviceId } = body as Record<string, unknown>;
 
   if (typeof name !== "string" || name.trim().length < 1 || name.trim().length > 40) {
     return NextResponse.json({ error: "Give your creature a name." }, { status: 400 });
+  }
+  if (typeof deviceId !== "string" || !DEVICE_ID_PATTERN.test(deviceId)) {
+    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
   if (
     !Array.isArray(pixels) ||
@@ -39,8 +49,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Use at least two colors - no solid-color blocks." }, { status: 400 });
   }
 
+  if ((await countCreaturesForDevice(deviceId)) >= MAX_PER_DEVICE) {
+    return NextResponse.json({ error: "You've already released 2 creatures - that's the limit for now." }, { status: 400 });
+  }
+
   try {
-    const creature = await addCreature(name.trim(), pixels as (string | null)[]);
+    const creature = await addCreature(name.trim(), pixels as (string | null)[], deviceId);
     return NextResponse.json({ ok: true, id: creature.id });
   } catch (error) {
     console.error("Creature submission failed:", error);
