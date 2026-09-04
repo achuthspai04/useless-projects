@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { PALETTE } from "./palette";
 
@@ -8,7 +7,6 @@ const GRID_SIZE = 16;
 const CELL_COUNT = GRID_SIZE * GRID_SIZE;
 
 export default function PixelEditor() {
-  const router = useRouter();
   const [pixels, setPixels] = useState<(string | null)[]>(() => Array(CELL_COUNT).fill(null));
   const [color, setColor] = useState<string | null>(PALETTE[0]);
   const [name, setName] = useState("");
@@ -70,8 +68,11 @@ export default function PixelEditor() {
         setStatus("error");
         return;
       }
-      // Straight to the gallery - no separate "released!" screen to click past first.
-      router.push("/creatures/gallery");
+      // A full navigation rather than router.push - the gallery is dynamic (fetches the latest
+      // creatures on every request), but Next's client-side router can still serve an already-
+      // cached RSC payload for a route visited earlier this session. Reloading the page
+      // guarantees the just-submitted creature actually shows up instead of a stale gallery.
+      window.location.href = "/creatures/gallery";
     } catch {
       setError("Couldn't reach the server. Check your connection and try again.");
       setStatus("error");
