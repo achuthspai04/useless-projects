@@ -6,7 +6,10 @@ import { useCallback, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 const morphTime = 1.5;
-const cooldownTime = 0.5;
+// How long a settled text holds still before morphing to the next one - timer-app.tsx's
+// MORPH_PASS_MS/MORPH_COOLDOWN_MS mirror this value exactly (their comments explain why), so
+// don't change this here without updating those too.
+const cooldownTime = 1;
 
 const useMorphingText = (texts: string[]) => {
   const textIndexRef = useRef(0);

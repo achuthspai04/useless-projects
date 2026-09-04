@@ -18,21 +18,26 @@ import { MorphingText } from "@/components/ui/liquid-text";
 // handing off to the live, still-ticking clock underneath makes the counter visibly skip forward
 // by that same amount. Predicting ahead is what makes the two actually line up.
 const BRAND_INTERLUDE_INTERVAL_MS = 20_000;
-const MORPH_PASS_MS = 2000;
+// Must equal (morphTime + cooldownTime) * 1000 from liquid-text.tsx exactly - that's how long one
+// pass actually takes there, and everything below (the predicted handoff time, the cooldown
+// safety margin) is scheduled against that real duration. cooldownTime was bumped from 0.5s to 1s
+// so the settled phrase actually holds for a beat instead of starting to morph away again almost
+// immediately - update both together if either changes.
+const MORPH_PASS_MS = 2500;
 const BRAND_INTERLUDE_DURATION_MS = MORPH_PASS_MS * 2;
-// liquid-text.tsx's cooldownTime (0.5s) is how long a MorphingText holds still on a settled text
-// before it automatically starts morphing to the *next* entry in its array on its own - it has no
-// concept of "stop after 2 passes", so once the second pass settles, it will start cycling back
-// toward the array's first (stale) entry the instant that 0.5s hold runs out, whether or not
-// we've unmounted it yet. If our own cross-fade-out took longer than that hold, the overlay would
-// still be partway through that unwanted third pass - visibly morphing toward stale, wrong text -
-// while it faded, which is what read as the counter glitching/disappearing right after the
-// interlude. So CROSSFADE_MS has to fit inside that 0.5s hold with room to spare, not be tuned
-// only for how smooth the fade itself looks.
-const MORPH_COOLDOWN_MS = 500;
-const CROSSFADE_MS = 380;
+// liquid-text.tsx's cooldownTime (1s, in seconds there) is how long a MorphingText holds still on
+// a settled text before it automatically starts morphing to the *next* entry in its array on its
+// own - it has no concept of "stop after 2 passes", so once the second pass settles, it will
+// start cycling back toward the array's first (stale) entry the instant that hold runs out,
+// whether or not we've unmounted it yet. If our own cross-fade-out took longer than that hold,
+// the overlay would still be partway through that unwanted third pass - visibly morphing toward
+// stale, wrong text - while it faded, which is what read as the counter glitching/disappearing
+// right after the interlude. So CROSSFADE_MS has to fit inside that hold with room to spare, not
+// be tuned only for how smooth the fade itself looks.
+const MORPH_COOLDOWN_MS = 1000;
+const CROSSFADE_MS = 500;
 // How much earlier than BRAND_INTERLUDE_DURATION_MS to actually unmount, on top of CROSSFADE_MS
-// itself - CROSSFADE_MS (380ms) already leaves 120ms of MORPH_COOLDOWN_MS (500ms) unused, and
+// itself - CROSSFADE_MS (500ms) already leaves 500ms of MORPH_COOLDOWN_MS (1000ms) unused, and
 // this reserves a slice of that as a buffer against setTimeout's own imprecision, rather than
 // spending all of it on the fade and cutting the unmount exactly as close as the math allows.
 const UNMOUNT_SAFETY_MARGIN_MS = 40;
