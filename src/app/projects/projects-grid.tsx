@@ -2,9 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Project } from "@/lib/metabase";
-
-const SELECT_CLASS =
-  "font-helvetica rounded-full border border-black/10 bg-white px-4 py-2 text-[12px] tracking-[0.06em] text-[#33322f] uppercase outline-none transition-colors focus:border-[#ea34df]";
+import Dropdown from "./dropdown";
 
 const STATUS_STYLE: Record<string, string> = {
   Valid: "bg-[#244638]/10 text-[#244638]",
@@ -63,59 +61,35 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-1.5 sm:gap-3">
-        <label className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <span className="font-helvetica shrink-0 text-[10px] tracking-[0.04em] text-[#33322f]/60 uppercase sm:text-[12px]">
-            Sort
-          </span>
-          <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={SELECT_CLASS}>
-            <option value="latest">Latest</option>
-            <option value="oldest">Oldest</option>
-            <option value="name">Name A-Z</option>
-          </select>
-        </label>
-
-        <label className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <span className="font-helvetica shrink-0 text-[10px] tracking-[0.04em] text-[#33322f]/60 uppercase sm:text-[12px]">
-            Venue
-          </span>
-          <select value={venue} onChange={(e) => setVenue(e.target.value)} className={`${SELECT_CLASS} max-w-[160px] sm:max-w-[240px]`}>
-            <option value="all">All venues</option>
-            {venues.map((v) => (
-              <option key={v} value={v}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <span className="font-helvetica shrink-0 text-[10px] tracking-[0.04em] text-[#33322f]/60 uppercase sm:text-[12px]">
-            Category
-          </span>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className={SELECT_CLASS}>
-            <option value="all">All categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex min-w-0 items-center gap-1 sm:gap-2">
-          <span className="font-helvetica shrink-0 text-[10px] tracking-[0.04em] text-[#33322f]/60 uppercase sm:text-[12px]">
-            Status
-          </span>
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={SELECT_CLASS}>
-            <option value="all">All statuses</option>
-            {statuses.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <Dropdown
+          label="Sort"
+          value={sort}
+          onChange={(v) => setSort(v as Sort)}
+          options={[
+            { value: "latest", label: "Latest" },
+            { value: "oldest", label: "Oldest" },
+            { value: "name", label: "Name A-Z" },
+          ]}
+        />
+        <Dropdown
+          label="Venue"
+          value={venue}
+          onChange={setVenue}
+          options={[{ value: "all", label: "All venues" }, ...venues.map((v) => ({ value: v, label: v }))]}
+        />
+        <Dropdown
+          label="Category"
+          value={category}
+          onChange={setCategory}
+          options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
+        />
+        <Dropdown
+          label="Status"
+          value={status}
+          onChange={setStatus}
+          options={[{ value: "all", label: "All statuses" }, ...statuses.map((s) => ({ value: s, label: s }))]}
+        />
 
         <span className="font-helvetica text-[12px] tracking-[0.04em] text-[#33322f]/60 uppercase">
           {visible.length} of {projects.length}
