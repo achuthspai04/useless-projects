@@ -44,22 +44,22 @@ export default function Dropdown({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`font-helvetica flex cursor-pointer items-center gap-1.5 rounded-full border bg-white px-4 py-2 text-[12px] tracking-[0.06em] text-[#33322f] uppercase shadow-xs transition-colors ${
+        className={`font-helvetica flex cursor-pointer items-center gap-1 rounded-full border bg-white px-2.5 py-1.5 text-[10px] tracking-[0.05em] text-[#33322f] uppercase shadow-xs transition-colors sm:gap-1.5 sm:px-4 sm:py-2 sm:text-[12px] sm:tracking-[0.06em] ${
           open ? "border-[#ea34df]" : "border-black/10 hover:border-[#ea34df]/40"
         }`}
       >
         <span className="text-[#33322f]/45">{label}</span>
-        <span className="max-w-[150px] truncate">{current?.label ?? value}</span>
+        <span className="max-w-[100px] truncate sm:max-w-[150px]">{current?.label ?? value}</span>
         <svg
           viewBox="0 0 24 24"
-          width="10"
-          height="10"
+          width="9"
+          height="9"
           fill="none"
           stroke="currentColor"
           strokeWidth={2.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`shrink-0 text-[#33322f]/50 transition-transform duration-200 ${open ? "-rotate-180" : ""}`}
+          className={`shrink-0 text-[#33322f]/50 transition-transform duration-200 sm:size-2.5 ${open ? "-rotate-180" : ""}`}
         >
           <path d="m6 9 6 6 6-6" />
         </svg>
@@ -80,7 +80,7 @@ export default function Dropdown({
                   onChange(opt.value);
                   setOpen(false);
                 }}
-                className={`font-helvetica block w-full cursor-pointer text-nowrap px-4 py-2 text-left text-[12px] tracking-[0.04em] uppercase transition-colors hover:bg-black/5 ${
+                className={`font-helvetica block w-full cursor-pointer text-nowrap px-3 py-1.5 text-left text-[11px] tracking-[0.04em] uppercase transition-colors hover:bg-black/5 sm:px-4 sm:py-2 sm:text-[12px] ${
                   opt.value === value ? "text-[#ea34df]" : "text-[#33322f]"
                 }`}
               >

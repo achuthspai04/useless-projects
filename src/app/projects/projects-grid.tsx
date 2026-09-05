@@ -12,11 +12,21 @@ const STATUS_STYLE: Record<string, string> = {
 
 type Sort = "latest" | "oldest" | "name";
 
+function IconFilter(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <path d="M4 5h16M7 12h10M10.5 19h3" />
+    </svg>
+  );
+}
+
 export default function ProjectsGrid({ projects }: { projects: Project[] }) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [sort, setSort] = useState<Sort>("latest");
   const [venue, setVenue] = useState("all");
   const [category, setCategory] = useState("all");
   const [status, setStatus] = useState("all");
+  const [type, setType] = useState("all");
 
   const venues = useMemo(
     () =>
@@ -41,10 +51,16 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
     [projects]
   );
 
+  const types = useMemo(
+    () => Array.from(new Set(projects.map((p) => p.type).filter((t): t is string => Boolean(t)))).sort((a, b) => a.localeCompare(b)),
+    [projects]
+  );
+
   const visible = useMemo(() => {
     let list = projects.filter((p) => {
       if (venue !== "all" && (p.venueName ?? p.campusName) !== venue) return false;
       if (status !== "all" && p.status !== status) return false;
+      if (type !== "all" && p.type !== type) return false;
       if (category !== "all") {
         const cats = p.categories ? p.categories.split(",").map((c) => c.trim()) : [];
         if (!cats.includes(category)) return false;
@@ -57,43 +73,69 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
     else if (sort === "name") list = [...list].sort((a, b) => a.name.localeCompare(b.name));
 
     return list;
-  }, [projects, sort, venue, category, status]);
+  }, [projects, sort, venue, category, status, type]);
+
+  const activeFilterCount = [venue, category, status, type].filter((v) => v !== "all").length;
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-        <Dropdown
-          label="Sort"
-          value={sort}
-          onChange={(v) => setSort(v as Sort)}
-          options={[
-            { value: "latest", label: "Latest" },
-            { value: "oldest", label: "Oldest" },
-            { value: "name", label: "Name A-Z" },
-          ]}
-        />
-        <Dropdown
-          label="Venue"
-          value={venue}
-          onChange={setVenue}
-          options={[{ value: "all", label: "All venues" }, ...venues.map((v) => ({ value: v, label: v }))]}
-        />
-        <Dropdown
-          label="Category"
-          value={category}
-          onChange={setCategory}
-          options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
-        />
-        <Dropdown
-          label="Status"
-          value={status}
-          onChange={setStatus}
-          options={[{ value: "all", label: "All statuses" }, ...statuses.map((s) => ({ value: s, label: s }))]}
-        />
+      <div className="flex flex-col gap-2 sm:gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((v) => !v)}
+            aria-expanded={filtersOpen}
+            className={`font-helvetica flex cursor-pointer items-center gap-1.5 rounded-full border bg-white px-3 py-1.5 text-[10px] tracking-[0.06em] uppercase shadow-xs transition-colors sm:px-4 sm:py-2 sm:text-[12px] ${
+              filtersOpen || activeFilterCount > 0 ? "border-[#ea34df] text-[#ea34df]" : "border-black/10 text-[#33322f] hover:border-[#ea34df]/40"
+            }`}
+          >
+            <IconFilter className="size-3 sm:size-3.5" />
+            Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+          </button>
 
-        <span className="font-helvetica text-[12px] tracking-[0.04em] text-[#33322f]/60 uppercase">
-          {visible.length} of {projects.length}
-        </span>
+          <span className="font-helvetica text-[10px] tracking-[0.04em] text-[#33322f]/60 uppercase sm:text-[12px]">
+            {visible.length} of {projects.length}
+          </span>
+        </div>
+
+        {filtersOpen && (
+          <div className="animate-nav-pop flex flex-wrap items-center gap-2 sm:gap-3">
+            <Dropdown
+              label="Sort"
+              value={sort}
+              onChange={(v) => setSort(v as Sort)}
+              options={[
+                { value: "latest", label: "Latest" },
+                { value: "oldest", label: "Oldest" },
+                { value: "name", label: "Name A-Z" },
+              ]}
+            />
+            <Dropdown
+              label="Type"
+              value={type}
+              onChange={setType}
+              options={[{ value: "all", label: "All types" }, ...types.map((t) => ({ value: t, label: t }))]}
+            />
+            <Dropdown
+              label="Venue"
+              value={venue}
+              onChange={setVenue}
+              options={[{ value: "all", label: "All venues" }, ...venues.map((v) => ({ value: v, label: v }))]}
+            />
+            <Dropdown
+              label="Category"
+              value={category}
+              onChange={setCategory}
+              options={[{ value: "all", label: "All categories" }, ...categories.map((c) => ({ value: c, label: c }))]}
+            />
+            <Dropdown
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[{ value: "all", label: "All statuses" }, ...statuses.map((s) => ({ value: s, label: s }))]}
+            />
+          </div>
+        )}
       </div>
 
       {visible.length === 0 ? (

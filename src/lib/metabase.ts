@@ -20,6 +20,8 @@ export type Project = {
   venueName: string | null;
   campusName: string | null;
   createdAt: string | null;
+  // "Software" or "Hardware" - projects.type in the source data.
+  type: string | null;
 };
 
 // event_team → the submitting team's name; event_team.venue_id → event_venue → the specific
@@ -27,7 +29,7 @@ export type Project = {
 // project can lack a team (solo/non-team submission), hence the left joins throughout.
 const QUERY = `
   select p.id, p.name, p.tagline, p.description, p.cover_image, p.project_url, p.source_code_url,
-         p.categories, p.status, p.created_at, et.name as team_name, ev.name as venue_name, so.name as campus_name
+         p.categories, p.status, p.created_at, p.type, et.name as team_name, ev.name as venue_name, so.name as campus_name
   from projects p
   left join event_team et on et.id = p.event_team_id
   left join event_venue ev on ev.id = et.venue_id
@@ -77,6 +79,7 @@ export async function listProjects(): Promise<Project[]> {
         venueName: (record.venue_name as string) || null,
         campusName: (record.campus_name as string) || null,
         createdAt: (record.created_at as string) || null,
+        type: (record.type as string) || null,
       };
     });
   } catch (error) {
