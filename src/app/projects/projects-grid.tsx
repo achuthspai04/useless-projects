@@ -79,7 +79,12 @@ export default function ProjectsGrid({ projects }: { projects: Project[] }) {
 
   return (
     <>
-      <div className="flex flex-col gap-2 sm:gap-3">
+      {/* relative z-30 here, not just on the dropdowns themselves - animate-nav-pop's entrance
+          transform lingers (animation-fill-mode: both keeps it at scale(1)/translateY(0), which
+          is still "a transform", not none) and quietly turns this into its own stacking context,
+          so without an explicit z-index here the actual stacking order was left up to how that
+          context compares to the grid below rather than the dropdown's own z-index. */}
+      <div className="relative z-30 flex flex-col gap-2 sm:gap-3">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             type="button"
